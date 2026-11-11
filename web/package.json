@@ -1,0 +1,21 @@
+{
+  "name": "prescriptive-stretching-3d",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "《精准拉伸》纯 3D 动态人体肌肉解剖与 PNF 伴读系统",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "validate": "esbuild src/scripts/validate40.ts --bundle --platform=node --format=esm --outfile=/tmp/validate40.mjs && node /tmp/validate40.mjs && rm -f /tmp/validate40.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173"
+  },
+  "dependencies": {
+    "three": "^0.172.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.172.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0"
+  }
+}

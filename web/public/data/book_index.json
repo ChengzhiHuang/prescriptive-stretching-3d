@@ -1,0 +1,746 @@
+{
+  "bookTitle": "精准拉伸",
+  "englishTitle": "Prescriptive Stretching",
+  "author": "Kristian Berg",
+  "publisher": "Human Kinetics (2011)",
+  "regions": [
+    {
+      "id": "neck-shoulder",
+      "name": "一、颈肩肌群",
+      "stretches": [
+        "upper-trapezius",
+        "sternocleidomastoid",
+        "scalenes",
+        "suboccipitals",
+        "levator-scapulae-1",
+        "levator-scapulae-2"
+      ]
+    },
+    {
+      "id": "chest-back",
+      "name": "二、胸部与上背",
+      "stretches": [
+        "pectoralis-major-1",
+        "pectoralis-major-2",
+        "pectoralis-minor-standing",
+        "pectoralis-minor-seated",
+        "middle-trapezius-rhomboids-standing",
+        "middle-trapezius-rhomboids-seated",
+        "latissimus-dorsi-standing",
+        "latissimus-dorsi-seated"
+      ]
+    },
+    {
+      "id": "rotator-cuff",
+      "name": "三、肩袖与肩周",
+      "stretches": [
+        "infraspinatus-1",
+        "infraspinatus-2",
+        "teres-major",
+        "supraspinatus-1",
+        "supraspinatus-2"
+      ]
+    },
+    {
+      "id": "hip-lumbar",
+      "name": "四、臀髋与腰部",
+      "stretches": [
+        "gluteus-maximus",
+        "gluteus-medius-minimus",
+        "piriformis-standing",
+        "piriformis-seated",
+        "quadratus-lumborum-lying",
+        "quadratus-lumborum-seated",
+        "psoas-iliacus"
+      ]
+    },
+    {
+      "id": "thigh",
+      "name": "五、大腿肌群",
+      "stretches": [
+        "rectus-femoris-supine",
+        "rectus-femoris-kneeling",
+        "tensor-fasciae-latae",
+        "hamstrings",
+        "short-adductors",
+        "gracilis"
+      ]
+    },
+    {
+      "id": "calf-arm",
+      "name": "六、小腿与上肢",
+      "stretches": [
+        "gastrocnemius",
+        "soleus",
+        "tibialis-anterior",
+        "biceps-brachii",
+        "triceps-brachii",
+        "forearm-flexors",
+        "forearm-extensors",
+        "extensor-carpi-radialis"
+      ]
+    }
+  ],
+  "stretches": [
+    {
+      "order": 1,
+      "slug": "upper-trapezius",
+      "chinese": "斜方肌上部",
+      "english": "Upper trapezius",
+      "regionId": "neck-shoulder",
+      "regionName": "一、颈肩肌群",
+      "printedPage": "26",
+      "sourcePageStart": 38,
+      "has3D": true
+    },
+    {
+      "order": 2,
+      "slug": "sternocleidomastoid",
+      "chinese": "胸锁乳突肌",
+      "english": "Sternocleidomastoid",
+      "regionId": "neck-shoulder",
+      "regionName": "一、颈肩肌群",
+      "printedPage": "30",
+      "sourcePageStart": 42,
+      "has3D": true
+    },
+    {
+      "order": 3,
+      "slug": "scalenes",
+      "chinese": "斜角肌群",
+      "english": "Scalenes",
+      "regionId": "neck-shoulder",
+      "regionName": "一、颈肩肌群",
+      "printedPage": "32",
+      "sourcePageStart": 44,
+      "has3D": true
+    },
+    {
+      "order": 4,
+      "slug": "suboccipitals",
+      "chinese": "枕下肌群",
+      "english": "Suboccipitals",
+      "regionId": "neck-shoulder",
+      "regionName": "一、颈肩肌群",
+      "printedPage": "34",
+      "sourcePageStart": 46,
+      "has3D": true
+    },
+    {
+      "order": 5,
+      "slug": "levator-scapulae-1",
+      "chinese": "肩胛提肌（版本1）",
+      "english": "Levator scapulae (version 1)",
+      "regionId": "neck-shoulder",
+      "regionName": "一、颈肩肌群",
+      "printedPage": "36",
+      "sourcePageStart": 48,
+      "has3D": true
+    },
+    {
+      "order": 6,
+      "slug": "levator-scapulae-2",
+      "chinese": "肩胛提肌（版本2）",
+      "english": "Levator scapulae (version 2)",
+      "regionId": "neck-shoulder",
+      "regionName": "一、颈肩肌群",
+      "printedPage": "38",
+      "sourcePageStart": 50,
+      "has3D": true
+    },
+    {
+      "order": 7,
+      "slug": "pectoralis-major-1",
+      "chinese": "胸大肌（版本1）",
+      "english": "Pectoralis major (version 1)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "40",
+      "sourcePageStart": 52,
+      "has3D": true
+    },
+    {
+      "order": 8,
+      "slug": "pectoralis-major-2",
+      "chinese": "胸大肌（版本2）",
+      "english": "Pectoralis major (version 2)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "42",
+      "sourcePageStart": 54,
+      "has3D": true
+    },
+    {
+      "order": 9,
+      "slug": "pectoralis-minor-standing",
+      "chinese": "胸小肌（站姿版）",
+      "english": "Pectoralis minor (standing version)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "44",
+      "sourcePageStart": 56,
+      "has3D": true
+    },
+    {
+      "order": 10,
+      "slug": "pectoralis-minor-seated",
+      "chinese": "胸小肌（坐姿版）",
+      "english": "Pectoralis minor (seated version)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "46",
+      "sourcePageStart": 58,
+      "has3D": true
+    },
+    {
+      "order": 11,
+      "slug": "middle-trapezius-rhomboids-standing",
+      "chinese": "斜方肌中部和菱形肌（站姿版）",
+      "english": "Middle trapezius and rhomboids (standing version)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "48",
+      "sourcePageStart": 60,
+      "has3D": true
+    },
+    {
+      "order": 12,
+      "slug": "middle-trapezius-rhomboids-seated",
+      "chinese": "斜方肌中部和菱形肌（坐姿版）",
+      "english": "Middle trapezius and rhomboids (seated version)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "50",
+      "sourcePageStart": 62,
+      "has3D": true
+    },
+    {
+      "order": 13,
+      "slug": "latissimus-dorsi-standing",
+      "chinese": "背阔肌（站姿版）",
+      "english": "Latissimus dorsi (standing version)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "52",
+      "sourcePageStart": 64,
+      "has3D": true
+    },
+    {
+      "order": 14,
+      "slug": "latissimus-dorsi-seated",
+      "chinese": "背阔肌（坐姿版）",
+      "english": "Latissimus dorsi (seated version)",
+      "regionId": "chest-back",
+      "regionName": "二、胸部与上背",
+      "printedPage": "55",
+      "sourcePageStart": 67,
+      "has3D": true
+    },
+    {
+      "order": 15,
+      "slug": "infraspinatus-1",
+      "chinese": "冈下肌（版本1）",
+      "english": "Infraspinatus (version 1)",
+      "regionId": "rotator-cuff",
+      "regionName": "三、肩袖与肩周",
+      "printedPage": "57",
+      "sourcePageStart": 69,
+      "has3D": true
+    },
+    {
+      "order": 16,
+      "slug": "infraspinatus-2",
+      "chinese": "冈下肌（版本2）",
+      "english": "Infraspinatus (version 2)",
+      "regionId": "rotator-cuff",
+      "regionName": "三、肩袖与肩周",
+      "printedPage": "60",
+      "sourcePageStart": 72,
+      "has3D": true
+    },
+    {
+      "order": 17,
+      "slug": "teres-major",
+      "chinese": "大圆肌",
+      "english": "Teres major",
+      "regionId": "rotator-cuff",
+      "regionName": "三、肩袖与肩周",
+      "printedPage": "62",
+      "sourcePageStart": 74,
+      "has3D": true
+    },
+    {
+      "order": 18,
+      "slug": "supraspinatus-1",
+      "chinese": "冈上肌（版本1）",
+      "english": "Supraspinatus (version 1)",
+      "regionId": "rotator-cuff",
+      "regionName": "三、肩袖与肩周",
+      "printedPage": "64",
+      "sourcePageStart": 76,
+      "has3D": true
+    },
+    {
+      "order": 19,
+      "slug": "supraspinatus-2",
+      "chinese": "冈上肌（版本2）",
+      "english": "Supraspinatus (version 2)",
+      "regionId": "rotator-cuff",
+      "regionName": "三、肩袖与肩周",
+      "printedPage": "66",
+      "sourcePageStart": 78,
+      "has3D": true
+    },
+    {
+      "order": 20,
+      "slug": "gluteus-maximus",
+      "chinese": "臀大肌",
+      "english": "Gluteus maximus",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "68",
+      "sourcePageStart": 80,
+      "has3D": true
+    },
+    {
+      "order": 21,
+      "slug": "gluteus-medius-minimus",
+      "chinese": "臀中肌和臀小肌",
+      "english": "Gluteus medius and minimus",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "70",
+      "sourcePageStart": 82,
+      "has3D": true
+    },
+    {
+      "order": 22,
+      "slug": "piriformis-standing",
+      "chinese": "梨状肌（站姿版）",
+      "english": "Piriformis (standing version)",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "72",
+      "sourcePageStart": 84,
+      "has3D": true
+    },
+    {
+      "order": 23,
+      "slug": "piriformis-seated",
+      "chinese": "梨状肌（坐姿版）",
+      "english": "Piriformis (seated version)",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "75",
+      "sourcePageStart": 87,
+      "has3D": true
+    },
+    {
+      "order": 24,
+      "slug": "quadratus-lumborum-lying",
+      "chinese": "腰方肌（卧姿版）",
+      "english": "Quadratus lumborum (lying version)",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "78",
+      "sourcePageStart": 90,
+      "has3D": true
+    },
+    {
+      "order": 25,
+      "slug": "quadratus-lumborum-seated",
+      "chinese": "腰方肌（坐姿版）",
+      "english": "Quadratus lumborum (seated version)",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "81",
+      "sourcePageStart": 93,
+      "has3D": true
+    },
+    {
+      "order": 26,
+      "slug": "psoas-iliacus",
+      "chinese": "腰大肌和髂肌（髋屈肌）",
+      "english": "Psoas and iliacus (hip flexors)",
+      "regionId": "hip-lumbar",
+      "regionName": "四、臀髋与腰部",
+      "printedPage": "83",
+      "sourcePageStart": 95,
+      "has3D": true
+    },
+    {
+      "order": 27,
+      "slug": "rectus-femoris-supine",
+      "chinese": "股直肌（仰卧版）",
+      "english": "Rectus femoris (supine version)",
+      "regionId": "thigh",
+      "regionName": "五、大腿肌群",
+      "printedPage": "86",
+      "sourcePageStart": 98,
+      "has3D": true
+    },
+    {
+      "order": 28,
+      "slug": "rectus-femoris-kneeling",
+      "chinese": "股直肌（跪姿版）",
+      "english": "Rectus femoris (kneeling version)",
+      "regionId": "thigh",
+      "regionName": "五、大腿肌群",
+      "printedPage": "90",
+      "sourcePageStart": 102,
+      "has3D": true
+    },
+    {
+      "order": 29,
+      "slug": "tensor-fasciae-latae",
+      "chinese": "阔筋膜张肌",
+      "english": "Tensor fasciae latae",
+      "regionId": "thigh",
+      "regionName": "五、大腿肌群",
+      "printedPage": "92",
+      "sourcePageStart": 104,
+      "has3D": true
+    },
+    {
+      "order": 30,
+      "slug": "hamstrings",
+      "chinese": "腘绳肌群",
+      "english": "Hamstrings",
+      "regionId": "thigh",
+      "regionName": "五、大腿肌群",
+      "printedPage": "95",
+      "sourcePageStart": 107,
+      "has3D": true
+    },
+    {
+      "order": 31,
+      "slug": "short-adductors",
+      "chinese": "耻骨肌、长收肌和短收肌（短内收肌群）",
+      "english": "Pectineus, adductor longus, and adductor brevis (short adductors)",
+      "regionId": "thigh",
+      "regionName": "五、大腿肌群",
+      "printedPage": "98",
+      "sourcePageStart": 110,
+      "has3D": true
+    },
+    {
+      "order": 32,
+      "slug": "gracilis",
+      "chinese": "股薄肌（长内收肌）",
+      "english": "Gracilis (long adductor)",
+      "regionId": "thigh",
+      "regionName": "五、大腿肌群",
+      "printedPage": "100",
+      "sourcePageStart": 112,
+      "has3D": true
+    },
+    {
+      "order": 33,
+      "slug": "gastrocnemius",
+      "chinese": "腓肠肌",
+      "english": "Gastrocnemius",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "102",
+      "sourcePageStart": 114,
+      "has3D": true
+    },
+    {
+      "order": 34,
+      "slug": "soleus",
+      "chinese": "比目鱼肌",
+      "english": "Soleus",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "104",
+      "sourcePageStart": 116,
+      "has3D": true
+    },
+    {
+      "order": 35,
+      "slug": "tibialis-anterior",
+      "chinese": "胫骨前肌",
+      "english": "Tibialis anterior",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "106",
+      "sourcePageStart": 118,
+      "has3D": true
+    },
+    {
+      "order": 36,
+      "slug": "biceps-brachii",
+      "chinese": "肱二头肌",
+      "english": "Biceps brachii",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "108",
+      "sourcePageStart": 120,
+      "has3D": true
+    },
+    {
+      "order": 37,
+      "slug": "triceps-brachii",
+      "chinese": "肱三头肌",
+      "english": "Triceps brachii",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "110",
+      "sourcePageStart": 122,
+      "has3D": true
+    },
+    {
+      "order": 38,
+      "slug": "forearm-flexors",
+      "chinese": "前臂屈肌群",
+      "english": "Forearm flexors",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "112",
+      "sourcePageStart": 124,
+      "has3D": true
+    },
+    {
+      "order": 39,
+      "slug": "forearm-extensors",
+      "chinese": "前臂伸肌群",
+      "english": "Forearm extensors",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "114",
+      "sourcePageStart": 126,
+      "has3D": true
+    },
+    {
+      "order": 40,
+      "slug": "extensor-carpi-radialis",
+      "chinese": "桡侧腕长伸肌和桡侧腕短伸肌",
+      "english": "Extensor carpi radialis longus and brevis",
+      "regionId": "calf-arm",
+      "regionName": "六、小腿与上肢",
+      "printedPage": "116",
+      "sourcePageStart": 128,
+      "has3D": true
+    }
+  ],
+  "painPrograms": [
+    {
+      "chinese": "醒来时会头痛吗？",
+      "english": "Do you wake up with a headache?",
+      "category": "waking",
+      "printedPage": "119",
+      "tip": "常见于夜间紧咬牙关或耸肩入睡；睡前放松肩颈并核对床垫与枕头支撑。",
+      "recommendedStretches": [
+        "upper-trapezius",
+        "suboccipitals",
+        "sternocleidomastoid"
+      ]
+    },
+    {
+      "chinese": "醒来时脖子会发僵吗？",
+      "english": "Do you wake up with a stiff neck?",
+      "category": "waking",
+      "printedPage": "119",
+      "tip": "多因侧卧枕头过高使颈侧一拉一缩；调整枕高让头颈与脊柱保持同一直线。",
+      "recommendedStretches": [
+        "levator-scapulae-1",
+        "upper-trapezius",
+        "scalenes"
+      ]
+    },
+    {
+      "chinese": "醒来时手臂会发麻吗？",
+      "english": "Are your arms asleep when you wake up?",
+      "category": "waking",
+      "printedPage": "120",
+      "tip": "多因仰卧双臂举过头顶压迫神经血管束；改为手臂放身体两侧，每晚睡前拉伸胸肌。",
+      "recommendedStretches": [
+        "pectoralis-major-1",
+        "pectoralis-minor-standing"
+      ]
+    },
+    {
+      "chinese": "醒来时肩膀会痛吗？",
+      "english": "Does your shoulder hurt when you wake up?",
+      "category": "waking",
+      "printedPage": "120",
+      "tip": "多因手臂压在枕头下方使肘高过头挤压冈上肌；改为仰卧或让手臂低于肩部入睡。",
+      "recommendedStretches": [
+        "supraspinatus-1",
+        "infraspinatus-1"
+      ]
+    },
+    {
+      "chinese": "醒来时腰背会痛吗？",
+      "english": "Does your lower back hurt when you wake up?",
+      "category": "waking",
+      "printedPage": "120",
+      "tip": "多因趴在过软床垫上导致腰椎反弓，叠加髋屈肌紧绷；睡前拉伸髋屈肌并改为侧卧。",
+      "recommendedStretches": [
+        "psoas-iliacus",
+        "piriformis-seated"
+      ]
+    },
+    {
+      "chinese": "突然腰痛（俗称闪了腰）",
+      "english": "Throwing Your Back Out",
+      "category": "program",
+      "printedPage": "121",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "piriformis-standing",
+        "piriformis-seated",
+        "psoas-iliacus",
+        "quadratus-lumborum-lying",
+        "quadratus-lumborum-seated",
+        "rectus-femoris-supine",
+        "rectus-femoris-kneeling"
+      ]
+    },
+    {
+      "chinese": "颈部僵痛",
+      "english": "Kink in Your Neck",
+      "category": "program",
+      "printedPage": "122",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "sternocleidomastoid",
+        "upper-trapezius",
+        "suboccipitals",
+        "middle-trapezius-rhomboids-standing",
+        "middle-trapezius-rhomboids-seated",
+        "scalenes",
+        "levator-scapulae-1",
+        "levator-scapulae-2"
+      ]
+    },
+    {
+      "chinese": "头痛",
+      "english": "Headache",
+      "category": "program",
+      "printedPage": "123",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "upper-trapezius",
+        "scalenes",
+        "sternocleidomastoid",
+        "levator-scapulae-1",
+        "levator-scapulae-2",
+        "suboccipitals"
+      ]
+    },
+    {
+      "chinese": "上背痛",
+      "english": "Upper-Back Pain",
+      "category": "program",
+      "printedPage": "125",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "pectoralis-major-1",
+        "pectoralis-major-2",
+        "middle-trapezius-rhomboids-standing",
+        "middle-trapezius-rhomboids-seated",
+        "latissimus-dorsi-standing",
+        "latissimus-dorsi-seated",
+        "sternocleidomastoid",
+        "levator-scapulae-1",
+        "levator-scapulae-2"
+      ]
+    },
+    {
+      "chinese": "放射至手臂和手的肩痛",
+      "english": "Shoulder Pain that Radiates into the Arm and Hand",
+      "category": "program",
+      "printedPage": "126",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "pectoralis-major-1",
+        "pectoralis-major-2",
+        "middle-trapezius-rhomboids-standing",
+        "middle-trapezius-rhomboids-seated",
+        "latissimus-dorsi-standing",
+        "latissimus-dorsi-seated",
+        "sternocleidomastoid",
+        "levator-scapulae-1",
+        "levator-scapulae-2",
+        "infraspinatus-1",
+        "infraspinatus-2",
+        "supraspinatus-1",
+        "supraspinatus-2",
+        "forearm-flexors",
+        "forearm-extensors",
+        "upper-trapezius"
+      ]
+    },
+    {
+      "chinese": "肩痛",
+      "english": "Shoulder Pain",
+      "category": "program",
+      "printedPage": "128",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "latissimus-dorsi-standing",
+        "latissimus-dorsi-seated",
+        "supraspinatus-1",
+        "supraspinatus-2",
+        "middle-trapezius-rhomboids-standing",
+        "middle-trapezius-rhomboids-seated",
+        "biceps-brachii",
+        "pectoralis-major-1",
+        "pectoralis-major-2",
+        "infraspinatus-1",
+        "infraspinatus-2"
+      ]
+    },
+    {
+      "chinese": "网球肘和高尔夫球肘",
+      "english": "Tennis Elbow and Golfer’s Elbow",
+      "category": "program",
+      "printedPage": "129",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "pectoralis-major-1",
+        "pectoralis-major-2",
+        "forearm-flexors",
+        "forearm-extensors",
+        "extensor-carpi-radialis"
+      ]
+    },
+    {
+      "chinese": "跑步膝",
+      "english": "Runner’s Knee",
+      "category": "program",
+      "printedPage": "130",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "quadratus-lumborum-lying",
+        "quadratus-lumborum-seated",
+        "tensor-fasciae-latae",
+        "rectus-femoris-supine",
+        "rectus-femoris-kneeling",
+        "piriformis-standing",
+        "piriformis-seated",
+        "gluteus-medius-minimus"
+      ]
+    },
+    {
+      "chinese": "腰背痛",
+      "english": "Lower-Back Pain",
+      "category": "program",
+      "printedPage": "131",
+      "tip": "建议按顺序完成下方关联肌群的温和 PNF 拉伸，若触发红线症状请及时就医评估。",
+      "recommendedStretches": [
+        "quadratus-lumborum-lying",
+        "quadratus-lumborum-seated",
+        "tensor-fasciae-latae",
+        "rectus-femoris-supine",
+        "rectus-femoris-kneeling",
+        "piriformis-standing",
+        "piriformis-seated",
+        "gluteus-medius-minimus",
+        "psoas-iliacus",
+        "hamstrings"
+      ]
+    }
+  ]
+}

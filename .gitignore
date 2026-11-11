@@ -1,0 +1,15 @@
+.DS_Store
+__pycache__/
+*.pyc
+*.tmp.pdf
+
+# 本地个人学习与构建目录（不推送至公网仓库）
+*.pdf
+tools/
+.build/
+.pdf_tools/
+web/public/pdfs/
+
+# 前端依赖与打包产物
+web/node_modules/
+web/dist/
