@@ -4,7 +4,7 @@
 
 在线预览：<https://chengzhihuang.github.io/prescriptive-stretching-3d/>
 
-完整说明请见仓库根目录 [`../README.md`](../README.md)。
+支持桌面端宽屏三栏工作台与手机端竖屏 / 横屏自适应跟练视图（触控旋转缩放、四阶段实时读秒、疼痛处方快捷切换及正误代偿对比）。完整功能与使用说明请见仓库根目录 [`../README.md`](../README.md)。
 
 ## 常用脚本
 

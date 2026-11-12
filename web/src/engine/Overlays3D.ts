@@ -31,6 +31,11 @@ export class Overlays3D {
   private overloadRingOuter: THREE.Mesh;
 
   private currentSpec: Stretch3DSpec | null = null;
+  private readonly projScratch = new THREE.Vector3();
+  private readonly labelMetrics = new WeakMap<
+    HTMLElement,
+    { halfW: number; halfH: number; widthKey: number }
+  >();
 
   constructor(overlayDomContainer: HTMLElement) {
     this.labelLayer = overlayDomContainer;
@@ -63,6 +68,7 @@ export class Overlays3D {
 
   public loadStretch(spec: Stretch3DSpec): void {
     this.currentSpec = spec;
+    this.labelMetrics.delete(this.angleLabelEl);
     this.group.clear();
     this.group.add(this.overloadRing);
     this.group.add(this.overloadRingOuter);
@@ -291,14 +297,35 @@ export class Overlays3D {
     height: number,
     el: HTMLElement
   ): void {
-    const p = worldPos.clone().project(camera);
+    const p = this.projScratch.copy(worldPos).project(camera);
     if (p.z > 1 || p.z < -1) {
       el.style.display = 'none';
       return;
     }
-    const x = (p.x * 0.5 + 0.5) * width;
-    const y = (-p.y * 0.5 + 0.5) * height;
+    const rawX = (p.x * 0.5 + 0.5) * width;
+    const rawY = (-p.y * 0.5 + 0.5) * height;
     el.style.display = 'inline-flex';
+
+    let metrics = this.labelMetrics.get(el);
+    if (!metrics || metrics.widthKey !== width || metrics.halfW === 0) {
+      metrics = {
+        halfW: el.offsetWidth * 0.5,
+        halfH: el.offsetHeight * 0.5,
+        widthKey: width,
+      };
+      this.labelMetrics.set(el, metrics);
+    }
+
+    const padX = 8;
+    const padY = 8;
+    const minX = padX + metrics.halfW;
+    const maxX = width - padX - metrics.halfW;
+    const minY = padY + metrics.halfH;
+    const maxY = height - padY - metrics.halfH;
+
+    const x = minX <= maxX ? THREE.MathUtils.clamp(rawX, minX, maxX) : width * 0.5;
+    const y = minY <= maxY ? THREE.MathUtils.clamp(rawY, minY, maxY) : height * 0.5;
+
     el.style.left = `${Math.round(x)}px`;
     el.style.top = `${Math.round(y)}px`;
   }
