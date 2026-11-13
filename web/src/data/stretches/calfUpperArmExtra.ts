@@ -28,7 +28,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
     ],
     poses: {
       setup: {
-        rootPos: [0, 0.90, -0.06],
+        rootPos: [0, 0.912, -0.06],
         pelvis: { pitch: 4 },
         shoulderR: { flex: 55, abduct: 8 },
         elbowR: { flex: 45 },
@@ -42,7 +42,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 12 },
       },
       stretch: {
-        rootPos: [0, 0.86, 0.02],
+        rootPos: [0, 0.881, 0.02],
         pelvis: { pitch: 8 },
         shoulderR: { flex: 62, abduct: 10 },
         elbowR: { flex: 58 },
@@ -56,7 +56,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 18 },
       },
       resist: {
-        rootPos: [0, 0.86, 0.02],
+        rootPos: [0, 0.881, 0.02],
         pelvis: { pitch: 8 },
         shoulderR: { flex: 62, abduct: 10 },
         elbowR: { flex: 58 },
@@ -70,7 +70,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 18 },
       },
       deepen: {
-        rootPos: [0, 0.83, 0.07],
+        rootPos: [0, 0.857, 0.07],
         pelvis: { pitch: 10 },
         shoulderR: { flex: 66, abduct: 10 },
         elbowR: { flex: 65 },
@@ -84,7 +84,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 22 },
       },
       mistake: {
-        rootPos: [0, 0.91, -0.06],
+        rootPos: [0, 0.945, -0.06],
         pelvis: { pitch: 28 },
         lumbar: { flex: 18 },
         hipR: { flex: 16 },
@@ -184,13 +184,13 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         '支撑面不能太低（需略高于膝盖并垫软枕），同时微屈右腿时不要过度屈膝',
       ],
     },
-    props: [{ type: 'chair', position: [-0.14, 0, -0.46], scale: [1, 1.15, 1] }],
+    props: [{ type: 'chair', position: [-0.14, 0, -0.46], scale: [1, 1.25, 1] }],
     fascicles: [
       { id: 'tib-ant-main', label: '胫骨前肌（胫骨外侧 → 跨踝前 → 第1跖骨底）', origin: 'tibia_lat_shaftR', via: ['ankle_ant_retinaculumR'], insertion: 'medial_cuneiformR', radius: 0.017, tendonRatio: 0.32 },
     ],
     poses: {
       setup: {
-        rootPos: [0, 0.92, 0],
+        rootPos: [0, 0.955, 0],
         pelvis: { pitch: 6 },
         shoulderR: { flex: -18, abduct: 8 },
         elbowR: { flex: 32 },
@@ -203,7 +203,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 8 },
       },
       stretch: {
-        rootPos: [0, 0.88, 0],
+        rootPos: [0, 0.957, 0],
         pelvis: { pitch: 8 },
         shoulderR: { flex: -22, abduct: 6 },
         elbowR: { flex: 20 },
@@ -216,7 +216,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 18 },
       },
       resist: {
-        rootPos: [0, 0.88, 0],
+        rootPos: [0, 0.957, 0],
         pelvis: { pitch: 8 },
         shoulderR: { flex: -22, abduct: 6 },
         elbowR: { flex: 20 },
@@ -229,7 +229,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 18 },
       },
       deepen: {
-        rootPos: [0, 0.86, 0],
+        rootPos: [0, 0.956, 0],
         pelvis: { pitch: 10 },
         shoulderR: { flex: -24, abduct: 6 },
         elbowR: { flex: 14 },
@@ -242,7 +242,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 24 },
       },
       mistake: {
-        rootPos: [0, 0.78, -0.05],
+        rootPos: [0, 0.938, -0.05],
         pelvis: { pitch: 32 },
         lumbar: { flex: 26 },
         shoulderR: { flex: -10, abduct: 14 },
@@ -344,14 +344,14 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         '严禁把手臂外旋掌心朝上抓杆！必须先让右臂内旋拇指朝髋再后伸抓杆',
       ],
     },
-    props: [{ type: 'bar', position: [0, 0.10, -0.56] }],
+    props: [{ type: 'bar', position: [0, 0.16, -0.56] }],
     fascicles: [
       { id: 'biceps-long', label: '肱二头肌（长头：盂上结节 → 桡骨粗隆）', origin: 'supraglenoid_tubercleR', via: ['shoulder_ant_capsuleR', 'humerus_bicipital_ridgeR'], insertion: 'radial_tuberosityR', radius: 0.017, tendonRatio: 0.26 },
       { id: 'biceps-short', label: '肱二头肌（短头：喙突 → 桡骨粗隆）', origin: 'coracoidR', via: ['shoulder_ant_capsuleR'], insertion: 'radial_tuberosityR', radius: 0.017, tendonRatio: 0.24 },
     ],
     poses: {
       setup: {
-        rootPos: [0, 0.92, 0],
+        rootPos: [0, 0.964, 0],
         pelvis: { pitch: 2 },
         clavicleR: { elevate: -4, protract: -6 },
         shoulderR: { flex: -56, abduct: 6, extRot: -65 },
@@ -364,7 +364,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 8 },
       },
       stretch: {
-        rootPos: [0, 0.82, 0],
+        rootPos: [0, 0.918, 0],
         pelvis: { pitch: 2 },
         clavicleR: { elevate: -6, protract: -10 },
         shoulderR: { flex: -74, abduct: 6, extRot: -72 },
@@ -379,7 +379,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 16 },
       },
       resist: {
-        rootPos: [0, 0.82, 0],
+        rootPos: [0, 0.918, 0],
         pelvis: { pitch: 2 },
         clavicleR: { elevate: -6, protract: -10 },
         shoulderR: { flex: -74, abduct: 6, extRot: -72 },
@@ -394,7 +394,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 16 },
       },
       deepen: {
-        rootPos: [0, 0.77, 0],
+        rootPos: [0, 0.896, 0],
         pelvis: { pitch: 2 },
         clavicleR: { elevate: -8, protract: -12 },
         shoulderR: { flex: -82, abduct: 6, extRot: -76 },
@@ -409,7 +409,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
         ankleL: { dorsiflex: 20 },
       },
       mistake: {
-        rootPos: [0, 0.86, 0.06],
+        rootPos: [0, 0.955, 0.06],
         pelvis: { pitch: 28 },
         lumbar: { flex: 22 },
         thoracic: { flex: 20 },

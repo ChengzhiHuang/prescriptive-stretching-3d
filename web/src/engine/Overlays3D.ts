@@ -50,8 +50,10 @@ export class Overlays3D {
       transparent: true,
       opacity: 0.85,
       depthTest: false,
+      depthWrite: false,
     });
     this.overloadRing = new THREE.Mesh(ringGeo, ringMat);
+    this.overloadRing.renderOrder = 8;
     this.overloadRing.visible = false;
 
     const outerGeo = new THREE.RingGeometry(0.085, 0.096, 32);
@@ -61,8 +63,10 @@ export class Overlays3D {
       transparent: true,
       opacity: 0.55,
       depthTest: false,
+      depthWrite: false,
     });
     this.overloadRingOuter = new THREE.Mesh(outerGeo, outerMat);
+    this.overloadRingOuter.renderOrder = 8;
     this.overloadRingOuter.visible = false;
   }
 
@@ -88,6 +92,7 @@ export class Overlays3D {
         emissiveIntensity: 0.45,
         roughness: 0.3,
         depthTest: false,
+        depthWrite: false,
         transparent: true,
         opacity: 0.92,
       });
@@ -125,12 +130,19 @@ export class Overlays3D {
         opacity: 0.24,
         side: THREE.DoubleSide,
         depthTest: false,
+        depthWrite: false,
       })
     );
     this.angleSectorMesh.renderOrder = 8;
     this.angleArcLine = new THREE.Line(
       new THREE.BufferGeometry(),
-      new THREE.LineBasicMaterial({ color: 0x7dd3fc, depthTest: false })
+      new THREE.LineBasicMaterial({
+        color: 0x7dd3fc,
+        transparent: true,
+        opacity: 0.95,
+        depthTest: false,
+        depthWrite: false,
+      })
     );
     this.angleArcLine.renderOrder = 9;
     this.group.add(this.angleSectorMesh, this.angleArcLine);

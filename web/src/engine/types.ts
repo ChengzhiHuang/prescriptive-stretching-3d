@@ -27,7 +27,7 @@ export interface PoseAngles {
   rootPos?: [number, number, number];
   rootYaw?: number;
   rootPitch?: number; // -90 = supine lying on back, +90 = prone
-  rootRoll?: number;  // +90 = right-side lying (beach position), -90 = left-side lying
+  rootRoll?: number;  // -90 = right-side lying (beach position), +90 = left-side lying
   pelvis?: {
     pitch?: number; // + = anterior pelvic tilt / hip hinge forward, - = posterior pelvic tuck
     yaw?: number;   // + = rotate left

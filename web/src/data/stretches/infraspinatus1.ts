@@ -43,7 +43,7 @@ export const infraspinatus1Spec: Stretch3DSpec = {
   ],
   poses: {
     setup: {
-      rootPos: [0, 0.94, 0],
+      rootPos: [0, 0.951, 0],
       pelvis: { pitch: 2 },
       clavicleR: { elevate: -6, protract: 4 },
       shoulderR: { flex: 68, abduct: -12, extRot: 0 },
@@ -57,7 +57,7 @@ export const infraspinatus1Spec: Stretch3DSpec = {
       kneeL: { flex: 4 },
     },
     stretch: {
-      rootPos: [0, 0.94, 0],
+      rootPos: [0, 0.951, 0],
       pelvis: { pitch: 2 },
       clavicleR: { elevate: -8, protract: 4 },
       shoulderR: { flex: 68, abduct: -12, extRot: -32 },
@@ -71,7 +71,7 @@ export const infraspinatus1Spec: Stretch3DSpec = {
       kneeL: { flex: 4 },
     },
     resist: {
-      rootPos: [0, 0.94, 0],
+      rootPos: [0, 0.951, 0],
       pelvis: { pitch: 2 },
       clavicleR: { elevate: -8, protract: 4 },
       shoulderR: { flex: 68, abduct: -12, extRot: -32 },
@@ -85,7 +85,7 @@ export const infraspinatus1Spec: Stretch3DSpec = {
       kneeL: { flex: 4 },
     },
     deepen: {
-      rootPos: [0, 0.94, 0],
+      rootPos: [0, 0.951, 0],
       pelvis: { pitch: 2 },
       clavicleR: { elevate: -9, protract: 4 },
       shoulderR: { flex: 68, abduct: -12, extRot: -42 },

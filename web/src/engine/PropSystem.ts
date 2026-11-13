@@ -10,6 +10,13 @@ import type { PropSpec } from './types';
 export class PropSystem {
   public readonly group = new THREE.Group();
   private dynamicLinks: { sockets: string[]; mesh: THREE.Mesh }[] = [];
+  private translucentPanels: THREE.Mesh[] = [];
+  private readonly panelPos = new THREE.Vector3();
+  private readonly panelNormal = new THREE.Vector3();
+  private readonly trunkCenter = new THREE.Vector3();
+  private readonly sternumPos = new THREE.Vector3();
+  private readonly camVec = new THREE.Vector3();
+  private readonly humanVec = new THREE.Vector3();
 
   private readonly woodMat = new THREE.MeshStandardMaterial({
     color: 0x3b4958,
@@ -29,6 +36,7 @@ export class PropSystem {
     metalness: 0.05,
     transparent: true,
     opacity: 0.52,
+    depthWrite: false,
   });
 
   private readonly strapMat = new THREE.MeshStandardMaterial({
@@ -56,12 +64,27 @@ export class PropSystem {
     }
   }
 
-  public updateDynamicProps(rig: HumanRig): void {
+  public updateDynamicProps(rig: HumanRig, camera?: THREE.Camera): void {
     for (const link of this.dynamicLinks) {
       const pts = link.sockets.map((s) => rig.getSocketWorldPos(s, new THREE.Vector3()));
       const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.25);
       link.mesh.geometry.dispose();
       link.mesh.geometry = new THREE.TubeGeometry(curve, 18, 0.009, 8, false);
+    }
+    if (camera && this.translucentPanels.length > 0) {
+      this.group.updateMatrixWorld(true);
+      rig.getSocketWorldPos('pelvis_center', this.trunkCenter);
+      rig.getSocketWorldPos('sternum_mid', this.sternumPos);
+      this.trunkCenter.lerp(this.sternumPos, 0.5);
+      for (const panel of this.translucentPanels) {
+        panel.getWorldPosition(this.panelPos);
+        this.panelNormal.set(0, 0, 1).transformDirection(panel.matrixWorld);
+        const camSide = this.camVec.subVectors(camera.position, this.panelPos).dot(this.panelNormal);
+        const humanSide = this.humanVec.subVectors(this.trunkCenter, this.panelPos).dot(this.panelNormal);
+        // HumanSurfaceDepth/HumanSurface use renderOrder 1..2; draw translucent walls before (0)
+        // when behind the body, or after (3) when the camera views the body through the wall.
+        panel.renderOrder = camSide * humanSide < 0 ? 3 : 0;
+      }
     }
   }
 
@@ -70,6 +93,7 @@ export class PropSystem {
       l.mesh.geometry.dispose();
     }
     this.dynamicLinks = [];
+    this.translucentPanels = [];
     this.group.clear();
   }
 
@@ -104,6 +128,7 @@ export class PropSystem {
         const wallWingR = new THREE.Mesh(new THREE.BoxGeometry(0.36, 2.05, 0.07), this.wallMat);
         wallWingR.position.set(-0.68, 1.025, 0);
         g.add(wallWingR);
+        this.translucentPanels.push(wallWingR);
 
         const jambL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.05, 0.14), this.woodMat);
         jambL.position.set(0.46, 1.025, 0);
@@ -156,6 +181,7 @@ export class PropSystem {
         const panel = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.05, 0.06), this.wallMat);
         panel.position.set(0, 1.025, 0);
         g.add(panel);
+        this.translucentPanels.push(panel);
         const trim = new THREE.Mesh(new THREE.BoxGeometry(1.31, 0.04, 0.07), this.woodMat);
         trim.position.set(0, 0.02, 0);
         g.add(trim);
@@ -172,6 +198,7 @@ export class PropSystem {
         wRight.position.set(0.33, 1.025, 0.33);
         wRight.rotation.y = -Math.PI / 4;
         g.add(wRight);
+        this.translucentPanels.push(wLeft, wRight);
         break;
       }
       case 'bar': {

@@ -29,7 +29,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
     ],
     poses: {
       setup: {
-        rootPos: [0, 0.93, -0.02],
+        rootPos: [0, 0.953, -0.02],
         clavicleR: { elevate: -6, protract: 2 },
         shoulderR: { flex: -24, abduct: 20, extRot: -48 },
         elbowR: { flex: 98 },
@@ -41,7 +41,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 12 },
       },
       stretch: {
-        rootPos: [0, 0.92, -0.09],
+        rootPos: [0, 0.958, -0.09],
         clavicleR: { elevate: -8, protract: 8 },
         shoulderR: { flex: -6, abduct: 18, extRot: -64 },
         elbowR: { flex: 98 },
@@ -53,7 +53,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 18 },
       },
       resist: {
-        rootPos: [0, 0.92, -0.09],
+        rootPos: [0, 0.958, -0.09],
         clavicleR: { elevate: -8, protract: 8 },
         shoulderR: { flex: -6, abduct: 18, extRot: -64 },
         elbowR: { flex: 98 },
@@ -65,7 +65,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 18 },
       },
       deepen: {
-        rootPos: [0, 0.91, -0.13],
+        rootPos: [0, 0.959, -0.13],
         clavicleR: { elevate: -9, protract: 12 },
         shoulderR: { flex: 4, abduct: 16, extRot: -72 },
         elbowR: { flex: 98 },
@@ -77,7 +77,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 22 },
       },
       mistake: {
-        rootPos: [0, 0.92, -0.12],
+        rootPos: [0, 0.947, -0.12],
         lumbar: { flex: -18 },
         clavicleR: { elevate: 18, protract: 18 },
         shoulderR: { flex: 12, abduct: 34, extRot: -58 },

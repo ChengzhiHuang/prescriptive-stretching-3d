@@ -22,14 +22,14 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         '桌面不能太高！否则手掌无法平贴且右肘被迫弯曲泄力（可在手下垫毛巾辅助伸直手指）',
       ],
     },
-    props: [{ type: 'table', position: [0, 0, 0.46] }],
+    props: [{ type: 'table', position: [0, 0, 0.46], scale: [1, 1.05, 1] }],
     fascicles: [
       { id: 'flex-superficial', label: '指浅/深屈肌与桡侧腕屈肌', origin: 'humerus_med_epicondyleR', via: ['wrist_palmarR'], insertion: 'palm_fingersR', radius: 0.016, tendonRatio: 0.32 },
       { id: 'flex-ulnaris', label: '尺侧腕屈肌与掌长肌', origin: 'humerus_med_epicondyleR', via: ['wrist_palmarR'], insertion: 'handR', radius: 0.014, tendonRatio: 0.28 },
     ],
     poses: {
       setup: {
-        rootPos: [0, 0.92, -0.06],
+        rootPos: [0, 0.946, -0.06],
         pelvis: { pitch: 8 },
         clavicleR: { elevate: -4, protract: 4 },
         shoulderR: { flex: 44, abduct: 4, extRot: 85 },
@@ -41,7 +41,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         hipL: { flex: 4 },
       },
       stretch: {
-        rootPos: [0, 0.91, -0.14],
+        rootPos: [0, 0.957, -0.14],
         pelvis: { pitch: 10 },
         clavicleR: { elevate: -6, protract: 2 },
         shoulderR: { flex: 54, abduct: 4, extRot: 88 },
@@ -55,7 +55,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 10 },
       },
       resist: {
-        rootPos: [0, 0.91, -0.14],
+        rootPos: [0, 0.957, -0.14],
         pelvis: { pitch: 10 },
         clavicleR: { elevate: -6, protract: 2 },
         shoulderR: { flex: 54, abduct: 4, extRot: 88 },
@@ -69,7 +69,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 10 },
       },
       deepen: {
-        rootPos: [0, 0.90, -0.19],
+        rootPos: [0, 0.958, -0.19],
         pelvis: { pitch: 12 },
         clavicleR: { elevate: -6, protract: 0 },
         shoulderR: { flex: 60, abduct: 4, extRot: 90 },
@@ -83,7 +83,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 14 },
       },
       mistake: {
-        rootPos: [0, 0.92, -0.08],
+        rootPos: [0, 0.94, -0.08],
         clavicleR: { elevate: 14 },
         shoulderR: { flex: 52, abduct: 18, extRot: 60 },
         elbowR: { flex: 46, pronate: -50 },
@@ -182,14 +182,14 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         '全程右拳必须握紧、右肘必须完全伸直！拳头一松开，指伸肌腱就失去了远端牵拉',
       ],
     },
-    props: [{ type: 'table', position: [0, 0, 0.46] }],
+    props: [{ type: 'table', position: [0, 0, 0.46], scale: [1, 1.05, 1] }],
     fascicles: [
       { id: 'ext-digitorum', label: '指伸肌与小指伸肌（外上髁 → 手背指腱）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'dorsal_fingersR', radius: 0.016, tendonRatio: 0.34 },
       { id: 'ext-ulnaris', label: '尺侧腕伸肌（外上髁 → 腕背尺侧）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'metacarpal_2_3R', radius: 0.014, tendonRatio: 0.28 },
     ],
     poses: {
       setup: {
-        rootPos: [0, 0.92, -0.06],
+        rootPos: [0, 0.946, -0.06],
         pelvis: { pitch: 8 },
         clavicleR: { elevate: -4, protract: 4 },
         shoulderR: { flex: 44, abduct: 4, extRot: -10 },
@@ -201,7 +201,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         hipL: { flex: 4 },
       },
       stretch: {
-        rootPos: [0, 0.91, -0.14],
+        rootPos: [0, 0.957, -0.14],
         pelvis: { pitch: 10 },
         clavicleR: { elevate: -6, protract: 2 },
         shoulderR: { flex: 54, abduct: 4, extRot: -12 },
@@ -215,7 +215,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 10 },
       },
       resist: {
-        rootPos: [0, 0.91, -0.14],
+        rootPos: [0, 0.957, -0.14],
         pelvis: { pitch: 10 },
         clavicleR: { elevate: -6, protract: 2 },
         shoulderR: { flex: 54, abduct: 4, extRot: -12 },
@@ -229,7 +229,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 10 },
       },
       deepen: {
-        rootPos: [0, 0.90, -0.19],
+        rootPos: [0, 0.958, -0.19],
         pelvis: { pitch: 12 },
         clavicleR: { elevate: -6, protract: 0 },
         shoulderR: { flex: 60, abduct: 4, extRot: -14 },
@@ -243,7 +243,7 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
         kneeL: { flex: 14 },
       },
       mistake: {
-        rootPos: [0, 0.92, -0.08],
+        rootPos: [0, 0.94, -0.08],
         clavicleR: { elevate: 14 },
         shoulderR: { flex: 50, abduct: 18 },
         elbowR: { flex: 48, pronate: 40 },

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { ContactShadows } from './ContactShadows';
 import { HumanRig, interpolatePoses } from './HumanRig';
 import { MuscleSystem } from './MuscleSystem';
 import { Overlays3D } from './Overlays3D';
@@ -64,6 +65,7 @@ export class Stage3D {
   private muscles: MuscleSystem;
   private props: PropSystem;
   private overlays: Overlays3D;
+  private readonly contactShadows: ContactShadows;
 
   private container: HTMLElement;
   private currentSpec: Stretch3DSpec | null = null;
@@ -100,6 +102,7 @@ export class Stage3D {
   private contextLost = false;
   private renderFailed = false;
   private hasRendered = false;
+  private surfaceRequested = false;
   private resizeObserver: ResizeObserver;
   public onTelemetry?: (t: StageTelemetry) => void;
 
@@ -112,7 +115,7 @@ export class Stage3D {
     this.mobile = options.mobile ?? false;
     this.showLabels = !this.mobile;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0b1222);
+    this.scene.background = new THREE.Color(0x101827);
 
     this.camera = new THREE.PerspectiveCamera(36, 1, 0.08, 28);
     this.camera.position.set(0.95, 1.25, 2.25);
@@ -122,7 +125,7 @@ export class Stage3D {
       powerPreference: this.mobile ? 'default' : 'high-performance',
     });
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.08;
+    this.renderer.toneMappingExposure = 1.02;
     const canvas = this.renderer.domElement;
     Object.assign(canvas.style, { display: 'block', width: '100%', height: '100%' });
     canvasContainer.appendChild(canvas);
@@ -143,36 +146,42 @@ export class Stage3D {
     canvas.addEventListener('webglcontextrestored', this.handleContextRestored);
 
     // Studio lighting
-    const hemi = new THREE.HemisphereLight(0xe2e8f0, 0x1e293b, 1.28);
+    const hemi = new THREE.HemisphereLight(0xe8eef5, 0x637384, 1.35);
     this.scene.add(hemi);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.55);
+    const keyLight = new THREE.DirectionalLight(0xfff4e9, 1.15);
     keyLight.position.set(2.2, 3.4, 2.6);
     this.scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.85);
+    const rimLight = new THREE.DirectionalLight(0xc6def9, 0.72);
     rimLight.position.set(-2.4, 2.0, -2.2);
     this.scene.add(rimLight);
 
     // Floor platform & subtle anatomical alignment grid
     const floorDisc = new THREE.Mesh(
       new THREE.CircleGeometry(1.75, 48),
-      new THREE.MeshStandardMaterial({ color: 0x111c30, roughness: 0.9, metalness: 0.05 })
+      new THREE.MeshStandardMaterial({ color: 0x172232, roughness: 1 })
     );
     floorDisc.rotation.x = -Math.PI / 2;
     floorDisc.position.y = -0.002;
     this.scene.add(floorDisc);
 
-    const grid = new THREE.GridHelper(3.0, 15, 0x334155, 0x1e293b);
+    const grid = new THREE.GridHelper(2.4, 12, 0x526075, 0x3b4a60);
     grid.position.y = 0.001;
+    grid.renderOrder = -2;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.22;
+    grid.material.depthWrite = false;
     this.scene.add(grid);
 
+    this.contactShadows = new ContactShadows();
     this.props = new PropSystem();
     this.rig = new HumanRig();
     this.muscles = new MuscleSystem();
     this.overlays = new Overlays3D(overlayContainer);
 
     this.scene.add(this.props.group);
+    this.scene.add(this.contactShadows.group);
     this.scene.add(this.rig.root);
     this.scene.add(this.muscles.group);
     this.scene.add(this.overlays.group);
@@ -449,7 +458,18 @@ export class Stage3D {
   }
 
   public setXrayMode(xray: boolean): void {
-    this.rig.setXrayOpacity(xray ? 0.1 : 0.34);
+    this.rig.setXrayMode(xray);
+  }
+
+  private async loadHumanSurface(): Promise<void> {
+    try {
+      const { loadHumanSurface } = await import('./HumanSurface');
+      if (this.disposed) return;
+      const surface = await loadHumanSurface();
+      if (this.disposed || !this.rig.attachSurface(surface)) surface.geometry.dispose();
+    } catch {
+      // The procedural rig remains usable if the visual asset fails to load.
+    }
   }
 
   private computeCurrentPose(spec: Stretch3DSpec, phase: PnfPhaseId, phaseProgress: number): PoseAngles {
@@ -577,6 +597,10 @@ export class Stage3D {
     if (!this.hasRendered && this.currentSpec && this.viewportWidth > 0 && !this.renderer.getContext().isContextLost()) {
       this.hasRendered = true;
       this.options.onFirstFrame?.();
+      if (!this.surfaceRequested) {
+        this.surfaceRequested = true;
+        void this.loadHumanSurface();
+      }
     }
     if (!this.rafId && this.canRender()) this.rafId = requestAnimationFrame(this.animate);
   };
@@ -613,7 +637,8 @@ export class Stage3D {
       const pose = this.computeCurrentPose(this.currentSpec, activeInfo.id, this.isPlaying ? progress : 1.0);
 
       this.rig.applyPose(pose);
-      this.props.updateDynamicProps(this.rig);
+      this.contactShadows.update(this.rig);
+      this.props.updateDynamicProps(this.rig, this.camera);
       const { strainRatio, elongationPct } = this.muscles.update(
         this.rig,
         activeInfo.id,
@@ -662,6 +687,7 @@ export class Stage3D {
     canvas.removeEventListener('webglcontextlost', this.handleContextLost);
     canvas.removeEventListener('webglcontextrestored', this.handleContextRestored);
     this.controls.dispose();
+    this.rig.disposeSurface();
 
     const geometries = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();

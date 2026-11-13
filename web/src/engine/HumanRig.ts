@@ -1,7 +1,61 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import type { HumanSurface } from './HumanSurface';
 import type { BallJointAngles, ClavicleAngles, Euler3, PoseAngles, SpineAngles } from './types';
 
 const DEG = Math.PI / 180;
+
+function createFacelessHead(): THREE.BufferGeometry {
+  // A rounded oval with a slightly narrower jaw. Sections give height, half-width,
+  // forward and rear radii, and center depth in millimeters from the neck seam.
+  const sections = [
+    [0, 51, 52, 44, 1],
+    [48, 62, 82, 59, -1],
+    [100, 72, 84, 77, -3],
+    [160, 75, 80, 85, -3],
+    [205, 66, 63, 68, -2],
+    [240, 42, 38, 42, -2],
+    [250, 0, 0, 0, -2],
+  ];
+  const profile = new THREE.CubicInterpolant(
+    Float32Array.from(sections, ([height]) => height),
+    new Float32Array(sections.flatMap(([, width, front, back, depth]) => [width ** 2, front ** 2, back ** 2, depth])),
+    4,
+  );
+  const radialSegments = 40;
+  const verticalSegments = 32;
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let ring = 0; ring < verticalSegments; ring++) {
+    const height = 125 * (1 - Math.cos(Math.PI * ring / verticalSegments));
+    const [widthSquared, frontSquared, backSquared, depth] = profile.evaluate(height);
+    const width = Math.sqrt(Math.max(0, widthSquared));
+    for (let side = 0; side < radialSegments; side++) {
+      const angle = 2 * Math.PI * side / radialSegments;
+      const front = Math.cos(angle);
+      const radius = Math.sqrt(Math.max(0, front < 0 ? backSquared : frontSquared));
+      positions.push(width * Math.sin(angle) / 1000, (height - 85) / 1000, (12 + depth + radius * front) / 1000);
+      if (ring < verticalSegments - 1) {
+        const current = ring * radialSegments + side;
+        const next = ring * radialSegments + (side + 1) % radialSegments;
+        indices.push(current, next, current + radialSegments, next, next + radialSegments, current + radialSegments);
+      }
+    }
+  }
+  const base = positions.length / 3;
+  const crown = base + 1;
+  positions.push(0, -0.085, 0.013, 0, 0.165, 0.01);
+  const topRing = base - radialSegments;
+  for (let side = 0; side < radialSegments; side++) {
+    const next = (side + 1) % radialSegments;
+    indices.push(base, next, side, topRing + side, topRing + next, crown);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
 
 function lerpNum(a = 0, b = 0, t: number): number {
   return a + (b - a) * t;
@@ -72,20 +126,24 @@ export function interpolatePoses(a: PoseAngles, b: PoseAngles, t: number): PoseA
  */
 export class HumanRig {
   public readonly root = new THREE.Group();
-  public readonly joints: Record<string, THREE.Group> = {};
+  public readonly joints: Record<string, THREE.Bone> = {};
   public readonly sockets: Record<string, THREE.Object3D> = {};
-  private skinMeshes: THREE.Mesh[] = [];
+  private readonly skinMeshes: THREE.Mesh[] = [];
+  private readonly skeletonMeshes: THREE.Mesh[] = [];
+  private readonly inverseRestMatrices = new Map<THREE.Bone, THREE.Matrix4>();
+  private readonly skullCrown = new THREE.Vector3();
+  private readonly fallbackCrown = new THREE.Vector3();
+  private surface?: { colorPass: THREE.SkinnedMesh; depthPass: THREE.SkinnedMesh; crown: THREE.Vector3 };
+  private xray = false;
 
   private readonly boneMat = new THREE.MeshStandardMaterial({
-    color: 0xe6dfd3,
-    roughness: 0.55,
-    metalness: 0.05,
+    color: 0xe6dbca,
+    roughness: 0.74,
   });
 
   private readonly jointCartilageMat = new THREE.MeshStandardMaterial({
-    color: 0xc5d8e6,
-    roughness: 0.4,
-    metalness: 0.05,
+    color: 0xc3cbd1,
+    roughness: 0.68,
   });
 
   private readonly skinMat = new THREE.MeshPhysicalMaterial({
@@ -100,22 +158,106 @@ export class HumanRig {
 
   constructor() {
     this.buildHierarchy();
+    this.root.updateMatrixWorld(true);
+    for (const joint of Object.values(this.joints)) {
+      this.inverseRestMatrices.set(joint, joint.matrixWorld.clone().invert());
+    }
+    this.root.traverse((object) => {
+      if (object instanceof THREE.Mesh && object.material !== this.skinMat) {
+        this.skeletonMeshes.push(object);
+      }
+    });
   }
 
-  public setXrayOpacity(opacity: number): void {
-    this.skinMat.opacity = opacity;
-    for (const m of this.skinMeshes) {
-      m.visible = opacity > 0.02;
+  public attachSurface({ geometry, jointNames }: HumanSurface): boolean {
+    if (this.surface) return false;
+    const bones = jointNames.map((name) => this.joints[name]);
+    const inverseMatrices = bones.map((bone) => this.inverseRestMatrices.get(bone));
+    if (!inverseMatrices.every((matrix) => matrix instanceof THREE.Matrix4)) return false;
+
+    // In the neutral bind pose the highest vertex is on the crown. Store it in head space
+    // so the arrow follows head motion independently of the anatomical angle reference.
+    const position = geometry.getAttribute('position');
+    let crownVertex = 0;
+    for (let i = 1; i < position.count; i++) {
+      if (position.getY(i) > position.getY(crownVertex)) crownVertex = i;
+    }
+    const crown = new THREE.Vector3().fromBufferAttribute(position, crownVertex)
+      .applyMatrix4(this.inverseRestMatrices.get(this.joints.head)!);
+
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xc0c5c9,
+      roughness: 0.79,
+      transparent: true,
+      opacity: 0.69,
+      depthWrite: false,
+      depthFunc: THREE.EqualDepth,
+    });
+    const colorPass = new THREE.SkinnedMesh(geometry, material);
+    const depthPass = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial({
+      transparent: true,
+      colorWrite: false,
+      depthWrite: true,
+      blending: THREE.NoBlending,
+    }));
+    // The mesh uses rig-space coordinates. Bind at the cached rest pose even if the load
+    // completes while the instructor is already holding a stretch.
+    const skeleton = new THREE.Skeleton(bones, inverseMatrices);
+    const bindMatrix = new THREE.Matrix4();
+    const bounds = new THREE.Sphere(this.joints.root.position.clone(), 1.5);
+    for (const pass of [depthPass, colorPass]) {
+      // EqualDepth needs the same projected position from both shader programs.
+      pass.material.onBeforeCompile = (shader) => {
+        shader.vertexShader = `invariant gl_Position;\n${shader.vertexShader}`;
+      };
+      pass.bind(skeleton, bindMatrix);
+      pass.boundingSphere = bounds;
+      pass.frustumCulled = false;
+    }
+    // Record the nearest body surface after the opaque muscle and prop colors have
+    // been drawn, then tint that color once even when limbs overlap on screen.
+    depthPass.name = 'HumanSurfaceDepth';
+    depthPass.renderOrder = 1;
+    colorPass.name = 'HumanSurface';
+    colorPass.renderOrder = 2;
+    this.surface = { colorPass, depthPass, crown };
+    this.root.add(depthPass, colorPass);
+    this.setXrayMode(this.xray);
+    return true;
+  }
+
+  public setXrayMode(xray: boolean): void {
+    this.xray = xray;
+    const crown = xray ? this.skullCrown : (this.surface?.crown ?? this.fallbackCrown);
+    this.sockets.head_crown.position.copy(crown);
+    this.skinMat.opacity = xray ? 0.1 : 0.34;
+    for (const mesh of this.skinMeshes) mesh.visible = !this.surface;
+    for (const mesh of this.skeletonMeshes) mesh.visible = xray || !this.surface;
+    if (this.surface) {
+      this.surface.colorPass.visible = !xray;
+      this.surface.depthPass.visible = !xray;
     }
   }
 
-  private makeJoint(name: string, parent: THREE.Object3D, x: number, y: number, z: number): THREE.Group {
-    const g = new THREE.Group();
-    g.name = name;
-    g.position.set(x, y, z);
-    parent.add(g);
-    this.joints[name] = g;
-    return g;
+  public disposeSurface(): void {
+    if (this.surface) {
+      this.surface.colorPass.geometry.dispose();
+      (this.surface.colorPass.material as THREE.Material).dispose();
+      (this.surface.depthPass.material as THREE.Material).dispose();
+      this.surface.colorPass.skeleton.dispose();
+      this.root.remove(this.surface.colorPass, this.surface.depthPass);
+      this.surface = undefined;
+      this.setXrayMode(this.xray);
+    }
+  }
+
+  private makeJoint(name: string, parent: THREE.Object3D, x: number, y: number, z: number): THREE.Bone {
+    const joint = new THREE.Bone();
+    joint.name = name;
+    joint.position.set(x, y, z);
+    parent.add(joint);
+    this.joints[name] = joint;
+    return joint;
   }
 
   private addSocket(name: string, parent: THREE.Object3D, x: number, y: number, z: number): THREE.Object3D {
@@ -165,20 +307,151 @@ export class HumanRig {
     this.skinMeshes.push(skinMesh);
   }
 
+  private addRibCage(thoracic: THREE.Bone): void {
+    const ribs: THREE.TubeGeometry[] = [];
+    const cartilage: THREE.TubeGeometry[] = [];
+    for (const side of [-1, 1]) {
+      // The lower three false ribs meet the costal margin instead of the sternum.
+      const costalMargin = Array.from({ length: 4 }, (_, i) => new THREE.Vector3(
+        side * (0.014 + i * 0.014), 0.105 - i * 0.012, 0.133 - i * 0.006,
+      ));
+      cartilage.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(costalMargin), 10, 0.004, 6));
+      for (let i = 0; i < 12; i++) {
+        const y = 0.253 - i * 0.020;
+        const width = 0.074 + 0.075 * Math.sin(Math.PI * (i + 1) / 16);
+        const floating = i >= 10;
+        const curve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(side * 0.017, y, -0.012),
+          new THREE.Vector3(side * width * 0.54, y - 0.003, -0.054),
+          new THREE.Vector3(side * width, y - 0.013, floating ? -0.040 : 0.025),
+          ...(floating ? [] : [
+            new THREE.Vector3(side * width * 0.74, y - 0.024, 0.100),
+            new THREE.Vector3(side * width * 0.48, y - 0.028, 0.121),
+          ]),
+        ]);
+        const radius = floating ? 0.004 : 0.0055;
+        ribs.push(new THREE.TubeGeometry(curve, 14, radius, 6));
+        if (!floating) {
+          const end = curve.getPoint(1);
+          const mid = end.clone().add(new THREE.Vector3(-side * 0.025, 0.001, 0.012));
+          const cartilageEnd = i < 7 ? new THREE.Vector3(side * 0.014, end.y, 0.133) : costalMargin[i - 6];
+          cartilage.push(new THREE.TubeGeometry(
+            new THREE.CatmullRomCurve3([end, mid, cartilageEnd]), 7, radius * 0.85, 6,
+          ));
+        }
+      }
+    }
+    thoracic.add(
+      new THREE.Mesh(mergeGeometries(ribs), this.boneMat),
+      new THREE.Mesh(mergeGeometries(cartilage), this.jointCartilageMat),
+    );
+    for (const geometry of [...ribs, ...cartilage]) geometry.dispose();
+
+    const sternumProfile = new THREE.Shape();
+    sternumProfile.moveTo(-0.024, 0.244);
+    sternumProfile.quadraticCurveTo(0, 0.257, 0.024, 0.244);
+    sternumProfile.quadraticCurveTo(0.013, 0.219, 0.013, 0.202);
+    sternumProfile.quadraticCurveTo(0.018, 0.140, 0.008, 0.108);
+    sternumProfile.quadraticCurveTo(0.007, 0.092, 0, 0.083);
+    sternumProfile.quadraticCurveTo(-0.007, 0.092, -0.008, 0.108);
+    sternumProfile.quadraticCurveTo(-0.018, 0.140, -0.013, 0.202);
+    sternumProfile.quadraticCurveTo(-0.013, 0.219, -0.024, 0.244);
+    const sternum = new THREE.Mesh(new THREE.ExtrudeGeometry(sternumProfile, {
+      depth: 0.009, bevelSize: 0.003, bevelThickness: 0.002, bevelSegments: 2, curveSegments: 4,
+    }), this.boneMat);
+    sternum.position.z = 0.122;
+    thoracic.add(sternum);
+  }
+
+  private addPelvicBones(pelvis: THREE.Bone): void {
+    const crest = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.058, 0.042, -0.085),
+      new THREE.Vector3(0.113, 0.063, -0.060),
+      new THREE.Vector3(0.141, 0.058, -0.013),
+      new THREE.Vector3(0.131, 0.048, 0.041),
+      new THREE.Vector3(0.119, 0.030, 0.075),
+    ]);
+    const lowerRim = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.055, -0.021, -0.079),
+      new THREE.Vector3(0.080, -0.014, -0.049),
+      new THREE.Vector3(0.092, -0.035, -0.006),
+      new THREE.Vector3(0.100, -0.028, 0.026),
+      new THREE.Vector3(0.095, -0.005, 0.075),
+    ]);
+    const sections = 16;
+    const ringSize = 8;
+    const positions: number[] = [];
+    const indices: number[] = [];
+    const point = new THREE.Vector3();
+    for (let section = 0; section <= sections; section++) {
+      const u = section / sections;
+      const top = crest.getPoint(u);
+      const bottom = lowerRim.getPoint(u);
+      const thickness = 0.005 + 0.005 * Math.sin(Math.PI * u);
+      for (let j = 0; j < ringSize; j++) {
+        const angle = j * 2 * Math.PI / ringSize;
+        point.copy(top).lerp(bottom, (1 - Math.cos(angle)) * 0.5);
+        positions.push(point.x + thickness * Math.sin(angle), point.y, point.z);
+        if (section === sections) continue;
+        const a = section * ringSize + j;
+        const b = a + ringSize;
+        const d = section * ringSize + (j + 1) % ringSize;
+        indices.push(a, b, d, b, d + ringSize, d);
+      }
+    }
+    for (let j = 1; j < ringSize - 1; j++) {
+      const end = sections * ringSize;
+      indices.push(0, j, j + 1, end, end + j + 1, end + j);
+    }
+    const iliacWing = new THREE.BufferGeometry();
+    iliacWing.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    iliacWing.setIndex(indices);
+    iliacWing.computeVertexNormals();
+
+    const pubicArch = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.099, -0.042, 0.002),
+      new THREE.Vector3(0.076, -0.038, 0.048),
+      new THREE.Vector3(0.036, -0.048, 0.075),
+      new THREE.Vector3(0, -0.053, 0.077),
+    ]);
+    const ischialArch = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.094, -0.036, -0.009),
+      new THREE.Vector3(0.071, -0.069, -0.044),
+      new THREE.Vector3(0.054, -0.085, -0.007),
+      new THREE.Vector3(0.029, -0.080, 0.048),
+      new THREE.Vector3(0.014, -0.054, 0.075),
+    ]);
+    const arches = [
+      new THREE.TubeGeometry(pubicArch, 12, 0.010, 8),
+      new THREE.TubeGeometry(ischialArch, 14, 0.013, 8),
+    ];
+    const lowerPelvis = mergeGeometries(arches);
+    arches.forEach((arch) => arch.dispose());
+    for (const side of [-1, 1]) {
+      const wing = new THREE.Mesh(iliacWing, this.boneMat);
+      const arch = new THREE.Mesh(lowerPelvis, this.boneMat);
+      wing.scale.x = arch.scale.x = side;
+      pelvis.add(wing, arch);
+    }
+
+    const sacrumProfile = new THREE.Shape();
+    sacrumProfile.moveTo(-0.048, 0.034);
+    sacrumProfile.quadraticCurveTo(0, 0.050, 0.048, 0.034);
+    sacrumProfile.quadraticCurveTo(0.036, -0.030, 0, -0.067);
+    sacrumProfile.quadraticCurveTo(-0.036, -0.030, -0.048, 0.034);
+    const sacrum = new THREE.Mesh(new THREE.ExtrudeGeometry(sacrumProfile, {
+      depth: 0.016, bevelSize: 0.005, bevelThickness: 0.004, bevelSegments: 2, curveSegments: 6,
+    }), this.boneMat);
+    sacrum.position.z = -0.083;
+    sacrum.rotation.x = 0.18;
+    pelvis.add(sacrum);
+  }
+
   private buildHierarchy(): void {
     const rootNode = this.makeJoint('root', this.root, 0, 0.94, 0);
     const pelvis = this.makeJoint('pelvis', rootNode, 0, 0, 0);
 
-    // Pelvis bone geometry (iliac wings + sacrum + ischial tuberosities)
-    const pelvisBowl = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.032, 12, 24), this.boneMat);
-    pelvisBowl.rotation.x = Math.PI / 2;
-    pelvisBowl.scale.set(1.18, 0.82, 1.15);
-    pelvis.add(pelvisBowl);
-
-    const sacrumMesh = new THREE.Mesh(new THREE.ConeGeometry(0.048, 0.11, 8), this.boneMat);
-    sacrumMesh.rotation.x = Math.PI;
-    sacrumMesh.position.set(0, -0.01, -0.075);
-    pelvis.add(sacrumMesh);
+    this.addPelvicBones(pelvis);
 
     const pelvisSkin = new THREE.Mesh(new THREE.SphereGeometry(0.165, 20, 16), this.skinMat);
     pelvisSkin.scale.set(1.08, 0.72, 0.78);
@@ -224,29 +497,19 @@ export class HumanRig {
 
     // Thoracic spine & Ribcage (y = 0 -> +0.28)
     const thoracic = this.makeJoint('thoracic', lumbar, 0, 0.175, 0);
-    for (let i = 0; i < 7; i++) {
-      const vy = 0.02 + i * 0.038;
-      const vBody = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.026, 0.024, 10), this.boneMat);
-      vBody.position.set(0, vy, -0.012 * Math.sin((i / 6) * Math.PI));
+    for (let i = 0; i < 12; i++) {
+      const vy = 0.023 + i * 0.020;
+      const radius = 0.023 - i * 0.0006;
+      const vBody = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.94, radius, 0.014, 10), this.boneMat);
+      vBody.position.set(0, vy, -0.012 * Math.sin((i / 11) * Math.PI));
       thoracic.add(vBody);
-      const spinous = new THREE.Mesh(new THREE.BoxGeometry(0.009, 0.018, 0.032), this.boneMat);
+      const spinous = new THREE.Mesh(new THREE.CapsuleGeometry(0.005, 0.022, 3, 6), this.boneMat);
+      spinous.rotation.x = Math.PI * 0.40;
       spinous.position.set(0, vy - 0.006, -0.032);
       thoracic.add(spinous);
     }
 
-    // Stylized anatomical ribcage & sternum
-    const ribCage = new THREE.Mesh(
-      new THREE.SphereGeometry(0.155, 20, 14),
-      new THREE.MeshStandardMaterial({ color: 0xe2dbce, roughness: 0.6, wireframe: true, transparent: true, opacity: 0.42 })
-    );
-    ribCage.scale.set(1.06, 0.88, 0.74);
-    ribCage.position.set(0, 0.145, 0.022);
-    thoracic.add(ribCage);
-
-    const sternum = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.15, 0.014), this.boneMat);
-    sternum.position.set(0, 0.165, 0.128);
-    sternum.rotation.x = -0.12;
-    thoracic.add(sternum);
+    this.addRibCage(thoracic);
 
     const chestSkin = new THREE.Mesh(new THREE.CylinderGeometry(0.165, 0.142, 0.27, 22), this.skinMat);
     chestSkin.scale.set(1.08, 1, 0.74);
@@ -289,34 +552,28 @@ export class HumanRig {
     }
 
     const head = this.makeJoint('head', neck, 0, 0.095, 0.008);
-    const cranium = new THREE.Mesh(new THREE.SphereGeometry(0.092, 20, 16), this.boneMat);
-    cranium.scale.set(0.86, 1.05, 0.98);
-    cranium.position.set(0, 0.095, 0.005);
-    head.add(cranium);
-
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.065, 0.085), this.boneMat);
-    jaw.position.set(0, 0.042, 0.032);
-    head.add(jaw);
-
-    // Nose bridge indicator so head orientation (+Z forward) is unmistakable!
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.036, 8), this.boneMat);
-    nose.rotation.x = Math.PI / 2;
-    nose.position.set(0, 0.082, 0.098);
-    head.add(nose);
-
-    const headSkin = new THREE.Mesh(new THREE.SphereGeometry(0.104, 22, 18), this.skinMat);
-    headSkin.scale.set(0.88, 1.12, 1.0);
-    headSkin.position.set(0, 0.088, 0.01);
-    head.add(headSkin);
-    this.skinMeshes.push(headSkin);
+    const headGeometry = createFacelessHead();
+    const headPositions = headGeometry.getAttribute('position');
+    this.fallbackCrown.fromBufferAttribute(headPositions, headPositions.count - 1);
+    const fallbackHead = new THREE.Mesh(headGeometry, this.skinMat);
+    fallbackHead.name = 'FallbackHead';
+    this.skinMeshes.push(fallbackHead);
+    const cranium = new THREE.Mesh(headGeometry, this.boneMat);
+    cranium.name = 'Cranium';
+    cranium.scale.set(0.90, 0.78, 0.93);
+    cranium.position.set(0, 0.026, -0.005);
+    cranium.updateMatrix();
+    this.skullCrown.copy(this.fallbackCrown).applyMatrix4(cranium.matrix);
+    head.add(cranium, fallbackHead);
 
     this.addSocket('occiput', head, 0, 0.042, -0.078);
     this.addSocket('vertex', head, 0, 0.205, 0.005);
-    this.addSocket('forehead', head, 0, 0.135, 0.095);
+    this.addSocket('head_crown', head, 0, 0, 0).position.copy(this.fallbackCrown);
+    this.addSocket('forehead', head, 0, 0.092, 0.084);
     for (const [sfx, sg] of [['R', -1], ['L', 1]] as const) {
       this.addSocket(`occiput${sfx}`, head, sg * 0.026, 0.044, -0.075);
       this.addSocket(`mastoid${sfx}`, head, sg * 0.068, 0.046, -0.022);
-      this.addSocket(`temple${sfx}`, head, sg * 0.082, 0.115, 0.015);
+      this.addSocket(`temple${sfx}`, head, sg * 0.072, 0.097, 0.015);
     }
 
     // Bilateral Shoulder Girdle (Clavicle + Scapula + Arm + Forearm + Hand)
@@ -475,6 +732,7 @@ export class HumanRig {
   public applyPose(pose: PoseAngles): void {
     const [rx, ry, rz] = pose.rootPos ?? [0, 0.94, 0];
     this.joints.root.position.set(rx, ry, rz);
+    this.surface?.colorPass.boundingSphere?.center.copy(this.joints.root.position);
     this.joints.root.rotation.set(
       (pose.rootPitch ?? 0) * DEG,
       (pose.rootYaw ?? 0) * DEG,
@@ -490,7 +748,7 @@ export class HumanRig {
       'YXZ'
     );
 
-    const applySpine = (g: THREE.Group, sp?: SpineAngles) => {
+    const applySpine = (g: THREE.Bone, sp?: SpineAngles) => {
       g.rotation.set(
         (sp?.flex ?? 0) * DEG,
         (sp?.twistLeft ?? 0) * DEG,
@@ -501,7 +759,7 @@ export class HumanRig {
     applySpine(this.joints.lumbar, pose.lumbar);
     applySpine(this.joints.thoracic, pose.thoracic);
 
-    const applyNeckHead = (g: THREE.Group, e?: Euler3) => {
+    const applyNeckHead = (g: THREE.Bone, e?: Euler3) => {
       g.rotation.set(
         (e?.flex ?? 0) * DEG,
         (e?.turnLeft ?? 0) * DEG,

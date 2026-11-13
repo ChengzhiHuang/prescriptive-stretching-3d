@@ -14,6 +14,9 @@ interface FascicleRuntime {
 
 const RADIAL_SEGMENTS = 12;
 const TUBULAR_SEGMENTS = 28;
+const IVORY_TENDON = new THREE.Color(0xf4efe6);
+const SYNERGIST_TENDON = new THREE.Color(0xcec4ba);
+const SYNERGIST_BELLY = new THREE.Color(0xa18c90);
 
 /**
  * Builds and updates 3D spindle-shaped anatomical muscle fascicles (with ivory tendons
@@ -30,12 +33,29 @@ export class MuscleSystem {
   public loadFascicles(specs: FascicleSpec[], rig: HumanRig): void {
     this.clear();
     for (const spec of specs) {
-      const geo = this.createSpindleGeometry();
+      const isNerve = spec.role === 'nerve';
+      const geo = this.createSpindleGeometry(isNerve ? 0 : (spec.tendonRatio ?? 0.2));
       const mat = new THREE.MeshStandardMaterial({
         vertexColors: true,
-        roughness: spec.role === 'nerve' ? 0.35 : 0.42,
-        metalness: 0.06,
+        roughness: isNerve ? 0.48 : 0.77,
       });
+      if (!isNerve) {
+        mat.onBeforeCompile = (shader) => {
+          shader.vertexShader = `varying vec2 vFiberUv;\n${shader.vertexShader}`.replace(
+            '#include <uv_vertex>',
+            '#include <uv_vertex>\nvFiberUv = uv;',
+          );
+          shader.fragmentShader = `varying vec2 vFiberUv;\n${shader.fragmentShader}`.replace(
+            '#include <color_fragment>',
+            `#include <color_fragment>
+            // Longitudinal fibers follow the curved tube and fade into the tendon.
+            float around = vFiberUv.x * 6.2831853;
+            float fibers = 0.5 + 0.5 * cos(13.0 * around + 0.9 * sin(3.0 * around));
+            float resolved = 1.0 - smoothstep(0.022, 0.065, fwidth(vFiberUv.x));
+            diffuseColor.rgb *= 1.0 - 0.21 * fibers * resolved * (1.0 - vFiberUv.y);`,
+          );
+        };
+      }
       const mesh = new THREE.Mesh(geo, mat);
       this.group.add(mesh);
 
@@ -94,27 +114,35 @@ export class MuscleSystem {
     return sum;
   }
 
-  private createSpindleGeometry(): THREE.BufferGeometry {
+  private createSpindleGeometry(tendonRatio: number): THREE.BufferGeometry {
     const vertCount = (TUBULAR_SEGMENTS + 1) * (RADIAL_SEGMENTS + 1);
-    const positions = new Float32Array(vertCount * 3);
-    const normals = new Float32Array(vertCount * 3);
-    const colors = new Float32Array(vertCount * 3);
+    const uvs = new Float32Array(vertCount * 2);
     const indices: number[] = [];
 
-    for (let i = 0; i < TUBULAR_SEGMENTS; i++) {
-      for (let j = 0; j < RADIAL_SEGMENTS; j++) {
+    for (let i = 0; i <= TUBULAR_SEGMENTS; i++) {
+      const u = i / TUBULAR_SEGMENTS;
+      const distanceFromEnd = Math.min(u, 1 - u);
+      const tendonMix = tendonRatio > 0
+        ? 1 - THREE.MathUtils.smoothstep(distanceFromEnd, tendonRatio * 0.25, tendonRatio)
+        : 0;
+      for (let j = 0; j <= RADIAL_SEGMENTS; j++) {
         const a = i * (RADIAL_SEGMENTS + 1) + j;
-        const b = (i + 1) * (RADIAL_SEGMENTS + 1) + j;
-        const c = (i + 1) * (RADIAL_SEGMENTS + 1) + (j + 1);
-        const d = i * (RADIAL_SEGMENTS + 1) + (j + 1);
-        indices.push(a, b, d, b, c, d);
+        uvs[a * 2] = j / RADIAL_SEGMENTS;
+        uvs[a * 2 + 1] = tendonMix;
+
+        if (i === TUBULAR_SEGMENTS || j === RADIAL_SEGMENTS) continue;
+        const b = a + RADIAL_SEGMENTS + 1;
+        // The circumference derivative crossed with the path tangent points outward.
+        indices.push(a, a + 1, b, b, a + 1, b + 1);
       }
     }
 
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    for (const name of ['position', 'normal', 'color']) {
+      const attribute = new THREE.BufferAttribute(new Float32Array(vertCount * 3), 3);
+      geo.setAttribute(name, attribute.setUsage(THREE.DynamicDrawUsage));
+    }
+    geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
     geo.setIndex(indices);
     return geo;
   }
@@ -131,12 +159,14 @@ export class MuscleSystem {
     let strainSum = 0;
     let primaryCount = 0;
 
-    const tendonCol = new THREE.Color(0xf4efe6);
     const bellyCol = new THREE.Color();
-    const tmpCol = new THREE.Color();
+    const ringColor = new THREE.Color();
 
     for (const item of this.items) {
       const { spec, mesh, originPin, insertionPin } = item;
+      const isNerve = spec.role === 'nerve';
+      const isSynergist = spec.role === 'synergist';
+      const tendonCol = isSynergist ? SYNERGIST_TENDON : IVORY_TENDON;
       const socketNames = [spec.origin, ...(spec.via ?? []), spec.insertion];
       this.tmpPts = socketNames.map((n) => rig.getSocketWorldPos(n, new THREE.Vector3()));
 
@@ -154,7 +184,7 @@ export class MuscleSystem {
       );
 
       let bellyBulge = 1.0;
-      if (spec.role === 'nerve') {
+      if (isNerve) {
         // Sciatic / brachial nerve cord: golden yellow, flashes orange if compressed in mistake mode
         if (isMistake) {
           const pulse = 0.5 + 0.5 * Math.sin(elapsedSec * 8.0);
@@ -182,7 +212,8 @@ export class MuscleSystem {
         bellyBulge = 1.0 - 0.14 * s;
       }
 
-      if (spec.role !== 'nerve' && spec.role !== 'synergist') {
+      if (isSynergist) bellyCol.lerp(SYNERGIST_BELLY, 0.58);
+      if (!isNerve && !isSynergist) {
         strainSum += isMistake ? rawStrain * 0.25 : rawStrain;
         primaryCount += 1;
       }
@@ -191,7 +222,7 @@ export class MuscleSystem {
       const posAttr = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
       const normAttr = mesh.geometry.getAttribute('normal') as THREE.BufferAttribute;
       const colAttr = mesh.geometry.getAttribute('color') as THREE.BufferAttribute;
-      const tendonRatio = spec.role === 'nerve' ? 0.0 : (spec.tendonRatio ?? 0.2);
+      const uvAttr = mesh.geometry.getAttribute('uv');
 
       let idx = 0;
       const pt = new THREE.Vector3();
@@ -204,41 +235,31 @@ export class MuscleSystem {
         const B = frames.binormals[i];
 
         // Spindle profile: tapered tendon ends, fusiform belly in the center
-        let rScale = 1.0;
-        let tendonMix = 0.0;
-        if (spec.role !== 'nerve') {
-          const bellyProfile = Math.sin(Math.PI * u);
-          rScale = (0.34 + 0.66 * Math.pow(bellyProfile, 0.75)) * bellyBulge;
-          if (u < tendonRatio) {
-            tendonMix = 1.0 - THREE.MathUtils.smoothstep(u, tendonRatio * 0.35, tendonRatio);
-          } else if (u > 1.0 - tendonRatio) {
-            tendonMix = THREE.MathUtils.smoothstep(u, 1.0 - tendonRatio, 1.0 - tendonRatio * 0.35);
-          }
-        }
-
+        const tendonMix = uvAttr.getY(idx);
+        const bellyProfile = Math.sin(Math.PI * u);
+        const rScale = isNerve ? 1 : (0.34 + 0.66 * Math.pow(bellyProfile, 0.75)) * bellyBulge;
         const r = spec.radius * rScale;
+        ringColor.copy(bellyCol).lerp(tendonCol, tendonMix);
         for (let j = 0; j <= RADIAL_SEGMENTS; j++) {
           const v = (j / RADIAL_SEGMENTS) * Math.PI * 2;
           const cosV = Math.cos(v);
           const sinV = Math.sin(v);
-          // Slight anatomical flattening (ribbon-like 1.0 x 0.72 cross-section) + longitudinal striation
-          const striation = spec.role === 'nerve' ? 1.0 : 1.0 + 0.045 * Math.cos(v * 6);
           normal.set(
             cosV * N.x + sinV * B.x,
             cosV * N.y + sinV * B.y,
             cosV * N.z + sinV * B.z
-          ).normalize();
+          );
 
           posAttr.setXYZ(
             idx,
-            pt.x + normal.x * r * striation,
-            pt.y + normal.y * r * 0.78 * striation,
-            pt.z + normal.z * r * striation
+            pt.x + normal.x * r,
+            pt.y + normal.y * r * 0.78,
+            pt.z + normal.z * r,
           );
+          normal.y /= 0.78;
+          normal.normalize();
           normAttr.setXYZ(idx, normal.x, normal.y, normal.z);
-
-          tmpCol.copy(bellyCol).lerp(tendonCol, tendonMix);
-          colAttr.setXYZ(idx, tmpCol.r, tmpCol.g, tmpCol.b);
+          colAttr.setXYZ(idx, ringColor.r, ringColor.g, ringColor.b);
           idx++;
         }
       }

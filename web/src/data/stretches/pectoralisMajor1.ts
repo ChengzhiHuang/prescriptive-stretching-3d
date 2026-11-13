@@ -121,7 +121,7 @@ export const pectoralisMajor1Spec: Stretch3DSpec = {
       ankleL: { dorsiflex: 22 },
     },
     mistake: {
-      rootPos: [-0.04, 0.89, 0.16],
+      rootPos: [-0.04, 0.944, 0.16],
       pelvis: { pitch: 22 },
       lumbar: { flex: -26 },
       thoracic: { flex: -12 },

@@ -341,8 +341,9 @@ class Pure3DCompanionApp {
           <div class="modal-card">
             <h2>关于本项目 · 版权与医疗免责声明</h2>
             <ul>
-              <li><strong>纯净 3D 伴读定位：</strong>本在线系统仅提供程序化生成的三维人体骨骼肌束模型与生物力学动作演示，<strong>不包含任何原书 PDF 文件、原书插图或原文内容</strong>，供读者在阅读《精准拉伸》（<em>Prescriptive Stretching</em>, Kristian Berg / Human Kinetics, 2011）纸质书或正版电子书时对照理解解剖位置与 PNF 发力节奏。请支持购买正版图书。</li>
+              <li>本系统提供三维人体、肌束和动作演示，帮助读者对照《精准拉伸》（<em>Prescriptive Stretching</em>, Kristian Berg / Human Kinetics, 2011）理解解剖位置与 PNF 发力节奏。<strong>应用不包含原书 PDF、插图或原文。</strong></li>
               <li><strong>开源代码许可：</strong>本仓库中的 Three.js 参数化人体运动学与肌束引擎源代码基于 MIT License 开源。</li>
+              <li>人体体表网格基于 <strong>MakeHuman 的 CC0 1.0 核心模型</strong>制作。</li>
               <li><strong>非医疗建议声明：</strong>三维动画、角度区间与要点提示仅供运动解剖学习交流，不构成亦不替代临床医疗诊断、物理治疗评估或康复处方。练习中一旦出现关节刺痛、头晕或放射麻木，请立即停止并咨询专业医师或物理治疗师。</li>
             </ul>
             <div style="text-align:right;">
