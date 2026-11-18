@@ -1012,9 +1012,21 @@ button:disabled {
 
 .app-shell:not(.is-mobile) .mobile-only,
 .app-shell:not(.is-mobile) .mobile-action-nav,
-.app-shell:not(.is-mobile) .mobile-stage-toolbar,
-.app-shell:not(.is-mobile) .mobile-gesture-hint {
+.app-shell:not(.is-mobile) .mobile-stage-toolbar {
   display: none;
+}
+
+.stage-cue {
+  padding: 8px 12px;
+  background: #122034;
+  color: #e6eaf1;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.app-shell:not(.is-mobile) .viewport-hud-bottom {
+  bottom: 42px;
 }
 
 .app-shell.is-mobile {
@@ -1190,7 +1202,7 @@ button:disabled {
   inset: 0;
 }
 
-.is-mobile .mobile-gesture-hint {
+.is-mobile .stage-cue {
   grid-area: gesture;
   padding: 3px 8px 5px;
   color: var(--text-muted);
@@ -1199,7 +1211,7 @@ button:disabled {
   background: var(--bg-deep);
 }
 
-.stage-column:is([data-stage-state="loading"], [data-stage-state="unavailable"]) .mobile-gesture-hint {
+.stage-column:is([data-stage-state="loading"], [data-stage-state="unavailable"]) .stage-cue {
   visibility: hidden;
 }
 

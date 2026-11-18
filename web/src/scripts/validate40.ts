@@ -35,6 +35,16 @@ function main(): void {
     assert(spec.phases.length === 4, `${spec.slug}: must define 4 PNF phases`);
     assert(spec.cameras.length >= 3, `${spec.slug}: must define at least 3 camera presets`);
 
+    assert(/^\d+(?:–\d+)?$/.test(spec.technique.pages), `${spec.slug}: technique page reference`);
+    for (const { at, on } of spec.technique.contacts) {
+      assert(validNodes.has(at), `${spec.slug}: unknown contact landmark ${at}`);
+      assert(on === 'floor' || validNodes.has(on) || spec.props.some(prop => prop.type === on),
+        `${spec.slug}: unknown contact target ${on}`);
+    }
+    for (const joint of Object.values(spec.supportBone ?? {})) assert(!!rig.joints[joint], `${spec.slug}: unknown support frame ${joint}`);
+    const stationary = JSON.stringify(spec.poses.stretch) === JSON.stringify(spec.poses.resist);
+    assert(stationary === (spec.technique.resistance === 'hold'), `${spec.slug}: resistance motion contradicts technique`);
+
     // Check all socket references
     for (const f of spec.fascicles) {
       for (const s of [f.origin, ...(f.via ?? []), f.insertion]) {

@@ -2,6 +2,17 @@ import type { Stretch3DSpec } from '../../engine/types';
 
 export const gastrocnemiusSpec: Stretch3DSpec = {
   slug: 'gastrocnemius',
+  planted: ['ankleR'],
+  technique: {
+    pages: '102–103',
+    contacts: [
+      { at: 'forefootR', on: 'step' },
+    ],
+    support: '右前脚掌踩台沿，足弓与足跟悬空',
+    movement: '保持右膝伸直，让右脚跟下降',
+    effort: '前脚掌下压，将身体抬高 2.5–5 厘米',
+    resistance: 'move',
+  },
   nameZh: '腓肠肌',
   nameEn: 'Gastrocnemius',
   regionName: '六、小腿与上肢',
@@ -21,7 +32,7 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
     ],
   },
   props: [
-    { type: 'step', position: [0, 0, -0.08] },
+    { type: 'step', position: [0, 0, -0.02] },
   ],
   fascicles: [
     {
@@ -45,7 +56,7 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
   ],
   poses: {
     setup: {
-      rootPos: [0, 1.07, -0.05],
+      rootPos: [0, 1.0992, -0.075],
       pelvis: { pitch: 0 },
       shoulderR: { abduct: 7, flex: 4 },
       elbowR: { flex: 14 },
@@ -55,11 +66,11 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
       kneeR: { flex: 0 },
       ankleR: { dorsiflex: 0 },
       hipL: { flex: 14, abduct: 4 },
-      kneeL: { flex: 16 },
+      kneeL: { flex: 50 },
       ankleL: { dorsiflex: 2 },
     },
     stretch: {
-      rootPos: [0, 1.03, -0.05],
+      rootPos: [0, 1.0729, -0.053],
       pelvis: { pitch: 0 },
       shoulderR: { abduct: 7, flex: 4 },
       elbowR: { flex: 14 },
@@ -69,12 +80,12 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
       kneeR: { flex: 0 },
       ankleR: { dorsiflex: 16 },
       hipL: { flex: 18, abduct: 4 },
-      kneeL: { flex: 22 },
+      kneeL: { flex: 50 },
       ankleL: { dorsiflex: 4 },
     },
     resist: {
       // Slightly lift body 1-2 inches (2.5-5 cm) via calf contraction per book p.115!
-      rootPos: [0, 1.06, -0.05],
+      rootPos: [0, 1.1057, -0.0577],
       pelvis: { pitch: 0 },
       shoulderR: { abduct: 7, flex: 4 },
       elbowR: { flex: 14 },
@@ -82,13 +93,13 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
       elbowL: { flex: 14 },
       hipR: { flex: -1, abduct: 2 },
       kneeR: { flex: 0 },
-      ankleR: { dorsiflex: 8 },
+      ankleR: { dorsiflex: -2 },
       hipL: { flex: 15, abduct: 4 },
-      kneeL: { flex: 18 },
+      kneeL: { flex: 50 },
       ankleL: { dorsiflex: 2 },
     },
     deepen: {
-      rootPos: [0, 1.01, -0.05],
+      rootPos: [0, 1.0626, -0.0393],
       pelvis: { pitch: 0 },
       shoulderR: { abduct: 7, flex: 4 },
       elbowR: { flex: 14 },
@@ -98,18 +109,18 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
       kneeR: { flex: 0 },
       ankleR: { dorsiflex: 23 },
       hipL: { flex: 20, abduct: 4 },
-      kneeL: { flex: 25 },
+      kneeL: { flex: 50 },
       ankleL: { dorsiflex: 5 },
     },
     mistake: {
-      rootPos: [0, 0.99, -0.02],
+      rootPos: [0, 1.0584, 0.0027],
       pelvis: { pitch: 12 },
       lumbar: { flex: 10 },
       hipR: { flex: 26, abduct: 2 },
       kneeR: { flex: 38 },
       ankleR: { dorsiflex: 20 },
       hipL: { flex: 24, abduct: 4 },
-      kneeL: { flex: 28 },
+      kneeL: { flex: 50 },
     },
   },
   mistakeInfo: {
@@ -133,7 +144,8 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
       stepNumber: 2,
       title: '初次拉伸：放松小腿 · 借体重让足跟缓慢下沉（持续60秒）',
       durationSec: 60,
-      cue: '保持右膝完全伸直，彻底放松小腿，借助体重让右脚跟缓慢下沉。腓肠肌非常强韧，需持续保持足足 1 分钟才能真正拉开！',
+      relaxSec: 6,
+      cue: '保持右膝完全伸直，彻底放松小腿，借助体重让右脚跟缓慢下沉。腓肠肌非常强韧，本步保持 60 秒。',
       breathingTip: '站立弓步推墙对腓肠肌几乎无效，台阶悬空下沉才能提供足够力矩。',
     },
     {
@@ -141,6 +153,7 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
       stepNumber: 3,
       title: 'PNF 抗阻：前脚掌下压将身体抬高 2.5–5 厘米',
       durationSec: 6,
+      relaxSec: 6,
       cue: '右前脚掌向下发力踩台阶，用小腿肌肉把身体轻轻向上抬高 1–2 英寸（2.5–5 厘米）抗阻 5–10 秒，随后放松 5–10 秒。',
       breathingTip: '抬起幅度很小即可，无需踮到最高点，重点是激活高尔基腱器官反射。',
     },

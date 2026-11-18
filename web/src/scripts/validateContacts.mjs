@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { Box3, BoxGeometry, Mesh, SkinnedMesh, Vector3 } from 'three';
+import { Box3, BoxGeometry, CylinderGeometry, Mesh, SkinnedMesh, Vector3 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { ALL_STRETCH_3D_LIST, STRETCH_3D_SPECS } from '../data/stretches/index.ts';
-import { HumanRig, interpolatePoses } from '../engine/HumanRig.ts';
+import { HumanRig, sampleTransition } from '../engine/HumanRig.ts';
 import { MuscleSystem } from '../engine/MuscleSystem.ts';
 import { PropSystem } from '../engine/PropSystem.ts';
+
+import { boxClearance, scalpProbe, vertexRegions } from './skinClearance.mjs';
 
 const MAX_PENETRATION = 0.005;
 const SAMPLES_PER_TRANSITION = 51;
@@ -65,6 +67,7 @@ function supportBounds(spec, type) {
   // The chair seat and wall panel are the largest faces on their contact planes.
   panels.sort((a, b) => b.area - a.area);
   assert(panels.length > 0, `Missing support surface for ${type}`);
+  props.dispose();
   return panels[0].bounds;
 }
 
@@ -109,6 +112,11 @@ function validatePiriformisElongation(rig, spec) {
     'Seated piriformis should lengthen through the correct phases and measure shorter in the mistake pose');
 }
 
+function motionTransitions(spec) {
+  return spec.technique.resistance === 'move' && spec.phases[2].relaxSec
+    ? [...TRANSITIONS, ['resist', 'stretch'], ['stretch', 'deepen']] : TRANSITIONS;
+}
+
 function validateExercise(rig, surface, slug, supportType) {
   const spec = STRETCH_3D_SPECS[slug];
   assert.deepEqual(spec.phases.map(({ id, durationSec }) => [id, durationSec]), [
@@ -148,7 +156,7 @@ function validateExercise(rig, surface, slug, supportType) {
         ranges.set(label, [Math.min(range[0], distance), Math.max(range[1], distance)]);
       };
 
-      rig.applyPose(interpolatePoses(spec.poses[from], spec.poses[to], sample / lastSample));
+      rig.applyPose(sampleTransition(spec, from, to, sample / lastSample));
       for (let index = 0; index < points.length; index++) {
         surface.getVertexPosition(index, points[index]).applyMatrix4(surface.matrixWorld);
       }
@@ -175,6 +183,159 @@ const rig = new HumanRig();
 const surface = await loadSkinnedSurface(rig);
 validateExercise(rig, surface, 'piriformis-seated', 'chair');
 validateExercise(rig, surface, 'rectus-femoris-kneeling', 'wall');
+
+// Use the same skinned surface and eased/IK path as the interactive viewer.
+function validateTeachingContacts() {
+  const regions = vertexRegions(surface);
+  const scalp = scalpProbe(surface, regions);
+  const p = new Vector3();
+  rig.applyPose({});
+  const inverse = surface.skeleton.boneInverses[surface.skeleton.bones.findIndex(b => b.name === 'wristR')];
+  const palm = [], fingertips = [];
+  for (const i of regions.get('wristR')) {
+    p.fromBufferAttribute(surface.geometry.attributes.position, i).applyMatrix4(inverse);
+    if (p.y < -0.040 && p.y > -0.086 && p.x > 0.010) palm.push(i);
+    if (p.y < -0.093) fingertips.push(i);
+  }
+  const regionGap = (indices, box) => {
+    let min = Infinity;
+    for (const i of indices) {
+      surface.getVertexPosition(i, p).applyMatrix4(surface.matrixWorld);
+      min = Math.min(min, boxClearance(p, box));
+    }
+    return min;
+  };
+  const boxGap = (bone, box) => regionGap(regions.get(bone), box);
+  const cases = [
+    ['upper-trapezius', 'chair', 'wristR', 0.005],
+    ['levator-scapulae-1', 'chair', 'wristR', 0.005],
+    ['pectoralis-major-1', 'doorframe', 'wristR', 0.010],
+    ['rectus-femoris-supine', 'bench', 'hipR', 0.010],
+    ['gastrocnemius', 'step', 'ankleR', 0.005],
+    ['forearm-extensors', 'table', 'wristR', 0.010],
+  ];
+  for (const [slug, prop, bone, maxGap] of cases) {
+    const spec = STRETCH_3D_SPECS[slug];
+    const bounds = prop === 'doorframe' ? jambBounds(spec) : supportBounds(spec, prop);
+    rig.applyPose(spec.poses.setup);
+    const pivotName = prop === 'step' ? 'forefootR' : 'handR';
+    const initialPivot = rig.getSocketWorldPos(pivotName);
+    const headContact = prop === 'chair';
+    let minSupport = Infinity, maxSupport = -Infinity, minHead = Infinity;
+    for (const [from, to] of TRANSITIONS) {
+      for (let k = 0; k < SAMPLES_PER_TRANSITION; k++) {
+        const t = k / (SAMPLES_PER_TRANSITION - 1);
+        rig.applyPose(sampleTransition(spec, from, to, t));
+        const context = `${slug} ${from}→${to} t=${t.toFixed(2)}`;
+        const gap = boxGap(bone, bounds);
+        assert(gap >= -MAX_PENETRATION && gap <= maxGap, `${context}: ${bone} support ${(gap * 1000).toFixed(1)} mm`);
+        minSupport = Math.min(minSupport, gap);
+        maxSupport = Math.max(maxSupport, gap);
+        if ((headContact || prop === 'step') && from !== 'mistake' && to !== 'mistake') {
+          const pivot = rig.getSocketWorldPos(pivotName);
+          const slide = Math.hypot(pivot.x - initialPivot.x, pivot.z - initialPivot.z);
+          assert(slide < 0.015, `${context}: planted contact slid ${(slide * 1000).toFixed(1)} mm`);
+        }
+        if (slug === 'rectus-femoris-supine' && to !== 'mistake') {
+          const chestGap = boxGap('thoracic', bounds);
+          assert(chestGap >= -MAX_PENETRATION && chestGap <= 0.012, `${context}: chest/bench ${chestGap} m`);
+          let sole = Infinity;
+          for (const i of regions.get('ankleL')) sole = Math.min(sole, surface.getVertexPosition(i, p).applyMatrix4(surface.matrixWorld).y);
+          assert(sole >= -MAX_PENETRATION && sole <= 0.010, `${context}: planted sole ${sole} m`);
+        }
+        if (headContact) {
+          assert(regionGap(palm, bounds) <= 0.012, `${context}: palm separated from chair edge`);
+          assert(regionGap(fingertips, bounds) <= 0.008, `${context}: fingertips separated from chair edge`);
+          const headGap = scalp(regions.get('wristL'));
+          minHead = Math.min(minHead, headGap);
+          assert(headGap >= -MAX_PENETRATION, `${context}: palm inside head ${(headGap * 1000).toFixed(1)} mm`);
+          const held = (from !== 'setup' && to !== 'setup') || (to !== 'setup' && t === 1);
+          if (held) assert(headGap <= 0.012, `${context}: palm separated from head`);
+        }
+        if (slug === 'pectoralis-major-1') {
+          const elbow = boxGap('elbowR', bounds);
+          assert(elbow >= -MAX_PENETRATION && elbow <= 0.015, `${context}: forearm at jamb ${(elbow * 1000).toFixed(1)} mm`);
+        }
+      }
+    }
+    const millimeters = v => (1000 * v).toFixed(1);
+    console.log(`✓ ${slug}: ${bone} support ${millimeters(minSupport)}…${millimeters(maxSupport)} mm` +
+      (headContact ? `, minimum palm/scalp clearance ${millimeters(minHead)} mm` : ''));
+  }
+  for (const [slug, hands] of [
+    ['scalenes', ['wristL']], ['suboccipitals', ['wristL', 'wristR']],
+    ['levator-scapulae-2', ['wristL', 'wristR']], ['teres-major', ['wristL', 'wristR']],
+    ['triceps-brachii', ['wristL', 'wristR']],
+  ]) {
+    for (const [from, to] of TRANSITIONS) {
+      for (let k = 0; k < ALL_EXERCISE_SAMPLES; k++) {
+        rig.applyPose(sampleTransition(STRETCH_3D_SPECS[slug], from, to, k / (ALL_EXERCISE_SAMPLES - 1)));
+        for (const hand of hands) {
+          const gap = scalp(regions.get(hand));
+          assert(gap >= -MAX_PENETRATION, `${slug} ${from}→${to} sample ${k}: ${hand}/scalp ${gap} m`);
+        }
+      }
+    }
+  }
+  // Displacements are measured on the landmark that moves in the book figure.
+  for (const [slug, landmark, low, high] of [
+    ['pectoralis-minor-seated', 'pelvis_center', 0.04, 0.06],
+    ['quadratus-lumborum-seated', 'head', 0.007, 0.02],
+    ['psoas-iliacus', 'forefootR', 0.04, 0.06],
+    ['gracilis', 'forefootR', 0.02, 0.035],
+  ]) {
+    const spec = STRETCH_3D_SPECS[slug];
+    rig.applyPose(spec.poses.stretch);
+    const start = rig.getSocketWorldPos(landmark).y;
+    rig.applyPose(spec.poses.resist);
+    const dy = rig.getSocketWorldPos(landmark).y - start;
+    assert(dy >= low && dy <= high, `${slug}: resistance displacement ${dy} m`);
+  }
+  const calf = STRETCH_3D_SPECS.gastrocnemius;
+  assert.equal(calf.phases.find(p => p.id === 'stretch').durationSec, 60);
+  const rise = calf.poses.resist.rootPos[1] - calf.poses.stretch.rootPos[1];
+  assert(rise >= 0.025 && rise <= 0.05, 'Gastrocnemius resistance should lift the body 2.5–5 cm');
+}
+
+function jambBounds(spec) {
+  const props = new PropSystem();
+  props.setProps(spec.props);
+  props.group.updateMatrixWorld(true);
+  const bounds = new Box3().setFromObject(props.group.children[0].children[0]);
+  props.dispose();
+  return bounds;
+}
+
+// Keep each panel in its own local frame. A world-aligned box around an oblique
+// wall would incorrectly classify empty space beside the wall as penetration.
+function cylinderClearance(p, { cylinder, scale }) {
+  const height = cylinder.height * scale.y;
+  const u = Math.max(0, Math.min(1, p.y / height + 0.5));
+  const radius = cylinder.radiusBottom + (cylinder.radiusTop - cylinder.radiusBottom) * u;
+  const side = (Math.hypot(p.x / scale.x, p.z / scale.z) - radius) * Math.min(scale.x, scale.z);
+  return Math.max(side, Math.abs(p.y) - height / 2);
+}
+
+function propSolids(spec) {
+  const props = new PropSystem();
+  props.setProps(spec.props);
+  props.group.updateMatrixWorld(true);
+  const solids = [];
+  props.group.traverse(object => {
+    const cylinder = object.geometry instanceof CylinderGeometry && !object.isInstancedMesh;
+    if (!(object.geometry instanceof BoxGeometry) && !cylinder) return;
+    object.geometry.computeBoundingBox();
+    const scale = object.getWorldScale(new Vector3());
+    const box = object.geometry.boundingBox.clone();
+    box.min.multiply(scale);
+    box.max.multiply(scale);
+    solids.push({ box, cylinder: cylinder ? object.geometry.parameters : null, scale, inverse: object.matrixWorld.clone().invert(), world: new Box3().setFromObject(object) });
+  });
+  props.dispose();
+  return solids;
+}
+
+validateTeachingContacts();
 
 function validateAllExercisesContacts(rigInstance, skinnedSurface) {
   const positions = skinnedSurface.geometry.getAttribute('position');
@@ -204,9 +365,13 @@ function validateAllExercisesContacts(rigInstance, skinnedSurface) {
     return null;
   });
   const point = new Vector3();
+  const rightHand = new Set(vertexRegions(skinnedSurface).get('wristR'));
 
   for (const spec of ALL_STRETCH_3D_LIST) {
+    const solids = propSolids(spec);
+    const local = new Vector3();
     const seatType = SEATED_EXERCISES.get(spec.slug);
+    const gripsChair = spec.technique.contacts.some(c => c.at === 'handR' && c.on === 'chair');
     const seat = seatType ? supportBounds(spec, seatType) : null;
     const table = spec.slug === 'latissimus-dorsi-seated' || spec.slug === 'quadratus-lumborum-seated'
       ? supportBounds(spec, 'table') : null;
@@ -214,9 +379,9 @@ function validateAllExercisesContacts(rigInstance, skinnedSurface) {
     const usesSideSupport = spec.slug === 'quadratus-lumborum-lying';
     const lastSample = (table || usesBenchForHandSupport || usesSideSupport
       ? SAMPLES_PER_TRANSITION : ALL_EXERCISE_SAMPLES) - 1;
-    for (const [from, to] of TRANSITIONS) {
+    for (const [from, to] of motionTransitions(spec)) {
       for (let sample = 0; sample <= lastSample; sample++) {
-        rigInstance.applyPose(interpolatePoses(spec.poses[from], spec.poses[to], sample / lastSample));
+        rigInstance.applyPose(sampleTransition(spec, from, to, sample / lastSample));
         let minFloorY = Infinity;
         let minSeatGap = Infinity;
         let deepestTableIntersection = 0;
@@ -226,8 +391,18 @@ function validateAllExercisesContacts(rigInstance, skinnedSurface) {
           ? { 'right foot': Infinity, 'right hip': Infinity, 'right arm': Infinity } : null;
         for (let index = 0; index < positions.count; index++) {
           skinnedSurface.getVertexPosition(index, point).applyMatrix4(skinnedSurface.matrixWorld);
+          for (const solid of solids) {
+            if (!solid.world.containsPoint(point)) continue;
+            local.copy(point).applyMatrix4(solid.inverse).multiply(solid.scale);
+            const gap = solid.cylinder ? cylinderClearance(local, solid) : boxClearance(local, solid.box);
+            assert(gap >= -MAX_PENETRATION,
+              `${spec.slug} ${from}→${to} sample ${sample}/${lastSample}: prop penetration ${(gap * 1000).toFixed(1)} mm`);
+          }
           if (point.y < minFloorY) minFloorY = point.y;
-          if (seat && insideFootprint(point, seat) && point.y > 0.18) {
+          // Fingers wrapping the outer edge can lie below seat-top height.
+          // Their signed distance to the actual solid is checked above, including
+          // the side and underside. Seated load-bearing regions use the top plane.
+          if (seat && insideFootprint(point, seat) && point.y > 0.18 && !(gripsChair && rightHand.has(index))) {
             minSeatGap = Math.min(minSeatGap, point.y - seat.max.y);
           }
           if (benchGaps && seat) {
@@ -295,7 +470,7 @@ function validateAllExercisesContacts(rigInstance, skinnedSurface) {
     }
   }
   console.log(`✓ All ${ALL_STRETCH_3D_LIST.length}/40 exercises passed floor and prop contact checks (at least ${ALL_EXERCISE_SAMPLES * TRANSITIONS.length} samples/exercise)`);
-  console.log(`✓ All four corrected exercises passed support checks (${SAMPLES_PER_TRANSITION * TRANSITIONS.length} samples/exercise)`);
+  console.log(`✓ Detailed seated, kneeling, bench and hand support checks passed (${SAMPLES_PER_TRANSITION * TRANSITIONS.length} samples/exercise)`);
 }
 
 validateAllExercisesContacts(rig, surface);

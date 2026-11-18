@@ -1,7 +1,8 @@
+import { HandSurface } from './HandSurface';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { HumanSurface } from './HumanSurface';
-import type { BallJointAngles, ClavicleAngles, Euler3, PoseAngles, SpineAngles } from './types';
+import type { BallJointAngles, ClavicleAngles, Euler3, FascicleSpec, PlantedLimb, PoseAngles, PoseId, SpineAngles, Stretch3DSpec } from './types';
 
 const DEG = Math.PI / 180;
 
@@ -89,6 +90,7 @@ export function interpolatePoses(a: PoseAngles, b: PoseAngles, t: number): PoseA
   });
 
   return {
+    grip: a.grip || b.grip ? [lerpNum(a.grip?.[0], b.grip?.[0], s), lerpNum(a.grip?.[1], b.grip?.[1], s)] : undefined,
     rootPos: lp3(a.rootPos ?? [0, 0.94, 0], b.rootPos ?? [0, 0.94, 0]),
     rootYaw: lerpNum(a.rootYaw, b.rootYaw, s),
     rootPitch: lerpNum(a.rootPitch, b.rootPitch, s),
@@ -119,6 +121,25 @@ export function interpolatePoses(a: PoseAngles, b: PoseAngles, t: number): PoseA
   };
 }
 
+/** Sample the same authored path in the renderer and offline clearance tests. */
+export function sampleTransition(spec: Stretch3DSpec, from: keyof Stretch3DSpec['poses'],
+  to: keyof Stretch3DSpec['poses'], t: number): PoseAngles {
+  if (from === 'stretch' && to === 'resist' && spec.technique.resistance === 'hold') return spec.poses.resist;
+  if (t <= 0) return spec.poses[from];
+  if (t >= 1) return spec.poses[to];
+  const other = from === 'setup' ? to : to === 'setup' ? from : null;
+  const guide = other && other !== 'setup' && other !== 'resist' ? spec.approach?.[other] : undefined;
+  const base = interpolatePoses(spec.poses[from], spec.poses[to], t);
+  if (spec.planted?.length) base.supportPath = { spec, from, to, weight: t * t * (3 - 2 * t) };
+  if (!guide || !other) return base;
+  const outward = from === 'setup' ? t : 1 - t;
+  const mid = { ...interpolatePoses(spec.poses.setup, spec.poses[other], 0.68), ...guide };
+  const arm = outward < 0.68
+    ? interpolatePoses(spec.poses.setup, mid, outward / 0.68)
+    : interpolatePoses(mid, spec.poses[other], (outward - 0.68) / 0.32);
+  return { ...base, shoulderL: arm.shoulderL, elbowL: arm.elbowL, wristL: arm.wristL };
+}
+
 /**
  * Parametric forward-kinematics human anatomical mannequin with translucent skin shell,
  * internal skeletal landmarks (spine, ribcage, pelvis, scapulae, long bones), and named
@@ -133,8 +154,11 @@ export class HumanRig {
   private readonly inverseRestMatrices = new Map<THREE.Bone, THREE.Matrix4>();
   private readonly skullCrown = new THREE.Vector3();
   private readonly fallbackCrown = new THREE.Vector3();
-  private surface?: { colorPass: THREE.SkinnedMesh; depthPass: THREE.SkinnedMesh; crown: THREE.Vector3 };
+  private surface?: { colorPass: THREE.SkinnedMesh; crown: THREE.Vector3 };
   private xray = false;
+  private readonly supports = new WeakMap<Stretch3DSpec, Map<PoseId, Map<string, THREE.Matrix4>>>();
+  private hands: (HandSurface | undefined)[] = [];
+  private targetMuscles: FascicleSpec[] = [];
 
   private readonly boneMat = new THREE.MeshStandardMaterial({
     color: 0xe6dbca,
@@ -185,45 +209,56 @@ export class HumanRig {
     const crown = new THREE.Vector3().fromBufferAttribute(position, crownVertex)
       .applyMatrix4(this.inverseRestMatrices.get(this.joints.head)!);
 
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xc0c5c9,
-      roughness: 0.79,
-      transparent: true,
-      opacity: 0.69,
-      depthWrite: false,
-      depthFunc: THREE.EqualDepth,
-    });
+    const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.74 });
     const colorPass = new THREE.SkinnedMesh(geometry, material);
-    const depthPass = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial({
-      transparent: true,
-      colorWrite: false,
-      depthWrite: true,
-      blending: THREE.NoBlending,
-    }));
-    // The mesh uses rig-space coordinates. Bind at the cached rest pose even if the load
-    // completes while the instructor is already holding a stretch.
-    const skeleton = new THREE.Skeleton(bones, inverseMatrices);
-    const bindMatrix = new THREE.Matrix4();
-    const bounds = new THREE.Sphere(this.joints.root.position.clone(), 1.5);
-    for (const pass of [depthPass, colorPass]) {
-      // EqualDepth needs the same projected position from both shader programs.
-      pass.material.onBeforeCompile = (shader) => {
-        shader.vertexShader = `invariant gl_Position;\n${shader.vertexShader}`;
-      };
-      pass.bind(skeleton, bindMatrix);
-      pass.boundingSphere = bounds;
-      pass.frustumCulled = false;
-    }
-    // Record the nearest body surface after the opaque muscle and prop colors have
-    // been drawn, then tint that color once even when limbs overlap on screen.
-    depthPass.name = 'HumanSurfaceDepth';
-    depthPass.renderOrder = 1;
+    colorPass.bind(new THREE.Skeleton(bones, inverseMatrices), new THREE.Matrix4());
+    colorPass.frustumCulled = false;
+    colorPass.boundingSphere = new THREE.Sphere(this.joints.root.position.clone(), 1.5);
     colorPass.name = 'HumanSurface';
-    colorPass.renderOrder = 2;
-    this.surface = { colorPass, depthPass, crown };
-    this.root.add(depthPass, colorPass);
+    this.surface = { colorPass, crown };
+    this.root.add(colorPass);
+    this.setTargetMuscles(this.targetMuscles);
     this.setXrayMode(this.xray);
     return true;
+  }
+
+  /** Paint a regional surface cue in the bind pose so crossing limbs retain their own color. */
+  public setTargetMuscles(muscles: FascicleSpec[]): void {
+    this.targetMuscles = muscles;
+    if (!this.surface) return;
+    const geometry = this.surface.colorPass.geometry;
+    const positions = geometry.getAttribute('position');
+    let colors = geometry.getAttribute('color');
+    if (!colors) {
+      colors = new THREE.Float32BufferAttribute(new Float32Array(positions.count * 3), 3);
+      geometry.setAttribute('color', colors);
+    }
+    const segments: { line: THREE.Line3; radius: number }[] = [];
+    for (const muscle of muscles) {
+      if (muscle.role === 'nerve' || muscle.role === 'synergist') continue;
+      const points = [muscle.origin, ...(muscle.via ?? []), muscle.insertion].map(name => {
+        const socket = this.sockets[name] ?? this.joints[name];
+        const bone = socket instanceof THREE.Bone ? socket : socket.parent as THREE.Bone;
+        const local = socket === bone ? new THREE.Vector3() : socket.position.clone();
+        return local.applyMatrix4(this.inverseRestMatrices.get(bone)!.clone().invert());
+      });
+      for (let i = 1; i < points.length; i++) {
+        segments.push({ line: new THREE.Line3(points[i - 1], points[i]), radius: 0.045 + muscle.radius * 3 });
+      }
+    }
+    const skin = new THREE.Color(0xd5bba5), target = new THREE.Color(0xd86843);
+    const point = new THREE.Vector3(), nearest = new THREE.Vector3(), color = new THREE.Color();
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i);
+      let tint = 0;
+      for (const { line, radius } of segments) {
+        line.closestPointToPoint(point, true, nearest);
+        tint = Math.max(tint, 1 - THREE.MathUtils.smoothstep(point.distanceTo(nearest), radius * 0.45, radius));
+      }
+      color.copy(skin).lerp(target, tint);
+      colors.setXYZ(i, color.r, color.g, color.b);
+    }
+    colors.needsUpdate = true;
   }
 
   public setXrayMode(xray: boolean): void {
@@ -235,7 +270,6 @@ export class HumanRig {
     for (const mesh of this.skeletonMeshes) mesh.visible = xray || !this.surface;
     if (this.surface) {
       this.surface.colorPass.visible = !xray;
-      this.surface.depthPass.visible = !xray;
     }
   }
 
@@ -243,9 +277,8 @@ export class HumanRig {
     if (this.surface) {
       this.surface.colorPass.geometry.dispose();
       (this.surface.colorPass.material as THREE.Material).dispose();
-      (this.surface.depthPass.material as THREE.Material).dispose();
       this.surface.colorPass.skeleton.dispose();
-      this.root.remove(this.surface.colorPass, this.surface.depthPass);
+      this.root.remove(this.surface.colorPass);
       this.surface = undefined;
       this.setXrayMode(this.xray);
     }
@@ -606,6 +639,7 @@ export class HumanRig {
       this.addSocket(`clavicle_lat${sfx}`, clav, sg * 0.125, 0.012, -0.068);
       this.addSocket(`acromion${sfx}`, clav, sg * 0.172, 0.016, -0.092);
       this.addSocket(`coracoid${sfx}`, clav, sg * 0.138, -0.008, -0.055);
+      if (sfx === 'R') this.addSocket('strap_shoulderR', clav, -0.155, 0.045, -0.165);
       this.addSocket(`scapula_sup_angle${sfx}`, clav, sg * 0.066, 0.022, -0.124);
       this.addSocket(`supraspinous_fossa${sfx}`, clav, sg * 0.095, 0.02, -0.125);
       this.addSocket(`infraspinous_fossa_sup${sfx}`, clav, sg * 0.088, -0.025, -0.132);
@@ -730,6 +764,18 @@ export class HumanRig {
   }
 
   public applyPose(pose: PoseAngles): void {
+    if (this.surface && (pose.grip || this.hands.length)) {
+      const mesh = this.surface.colorPass;
+      for (const [i, side] of ['R', 'L'].entries()) {
+        const amount = pose.grip?.[i] ?? 0;
+        if (amount && !this.hands[i]) {
+          const bone = this.joints['wrist' + side];
+          this.hands[i] = new HandSurface(mesh.geometry, mesh.skeleton.bones.indexOf(bone),
+            this.inverseRestMatrices.get(bone)!, i === 0 ? 1 : -1);
+        }
+        this.hands[i]?.setAmount(amount);
+      }
+    }
     const [rx, ry, rz] = pose.rootPos ?? [0, 0.94, 0];
     this.joints.root.position.set(rx, ry, rz);
     this.surface?.colorPass.boundingSphere?.center.copy(this.joints.root.position);
@@ -830,6 +876,94 @@ export class HumanRig {
     }
 
     this.root.updateMatrixWorld(true);
+    if (pose.supportPath) this.plantLimbs(pose, pose.supportPath);
+  }
+
+  private plantLimbs(pose: PoseAngles, path: NonNullable<PoseAngles['supportPath']>): void {
+    const { spec, from, to, weight } = path;
+    let poses = this.supports.get(spec);
+    if (!poses) {
+      poses = new Map();
+      for (const id of Object.keys(spec.poses) as PoseId[]) {
+        this.applyPose(spec.poses[id]);
+        const names = spec.elbowOnJamb ? [...spec.planted!, 'elbowR'] : spec.planted!;
+        const endpoints = new Map<string, THREE.Matrix4>();
+        for (const name of names) {
+          const matrix = this.joints[name].matrixWorld.clone();
+          const reference = spec.supportBone?.[name as PlantedLimb];
+          if (reference) matrix.premultiply(this.joints[reference].matrixWorld.clone().invert());
+          endpoints.set(name, matrix);
+        }
+        poses.set(id, endpoints);
+      }
+      this.supports.set(spec, poses);
+      this.applyPose({ ...pose, supportPath: undefined });
+    }
+    for (const name of spec.planted!) {
+      const a = poses.get(from)!.get(name)!, b = poses.get(to)!.get(name)!;
+      const position = new THREE.Vector3().setFromMatrixPosition(a).lerp(new THREE.Vector3().setFromMatrixPosition(b), weight);
+      const rotation = new THREE.Quaternion().setFromRotationMatrix(a).slerp(new THREE.Quaternion().setFromRotationMatrix(b), weight);
+      const arc = spec.supportArc;
+      if (arc?.limb === name && (!arc.transitions || arc.transitions.some(([a, b]) => a === from && b === to))) {
+        position.addScaledVector(new THREE.Vector3(...arc.offset), 4 * weight * (1 - weight));
+      }
+      const reference = spec.supportBone?.[name];
+      if (reference) {
+        const bone = this.joints[reference];
+        position.applyMatrix4(bone.matrixWorld);
+        rotation.premultiply(bone.getWorldQuaternion(new THREE.Quaternion()));
+      }
+      const elbowX = name === 'wristR' && spec.elbowOnJamb
+        ? THREE.MathUtils.lerp(poses.get(from)!.get('elbowR')!.elements[12],
+          poses.get(to)!.get('elbowR')!.elements[12], weight) : undefined;
+      this.placeLimb(this.joints[name], position, rotation, elbowX);
+    }
+  }
+
+  /** Two-link IK keeps the elbow/knee in the plane selected by the authored pose. */
+  private placeLimb(end: THREE.Bone, target: THREE.Vector3, rotation: THREE.Quaternion, elbowX?: number): void {
+    const middle = end.parent!, upper = middle.parent!;
+    const a = upper.getWorldPosition(new THREE.Vector3());
+    const b = middle.getWorldPosition(new THREE.Vector3());
+    const c = end.getWorldPosition(new THREE.Vector3());
+    const first = a.distanceTo(b), second = b.distanceTo(c);
+    const direction = target.clone().sub(a);
+    const distance = THREE.MathUtils.clamp(direction.length(), Math.abs(first - second) + 1e-6, first + second - 1e-6);
+    direction.normalize();
+    const pole = b.clone().sub(a);
+    pole.addScaledVector(direction, -pole.dot(direction));
+    if (pole.lengthSq() < 1e-10) {
+      pole.set(0, 0, 1).applyQuaternion(upper.getWorldQuaternion(new THREE.Quaternion()));
+      pole.addScaledVector(direction, -pole.dot(direction));
+    }
+    const along = (first * first - second * second + distance * distance) / (2 * distance);
+    const center = a.clone().addScaledVector(direction, along);
+    const radius = Math.sqrt(Math.max(0, first * first - along * along));
+    pole.normalize();
+    if (elbowX !== undefined && radius > 1e-6) {
+      // An elbow with fixed upper/lower arm lengths lies on a circle about the
+      // shoulder–wrist line. Intersect that circle with the jamb contact plane.
+      const normal = new THREE.Vector3(1, 0, 0).addScaledVector(direction, -direction.x);
+      const length = normal.length();
+      if (length > 1e-6) {
+        normal.divideScalar(length);
+        const tangent = new THREE.Vector3().crossVectors(direction, normal);
+        const cosine = THREE.MathUtils.clamp((elbowX - center.x) / (radius * length), -1, 1);
+        const sine = Math.sqrt(1 - cosine * cosine) * (pole.dot(tangent) >= 0 ? 1 : -1);
+        pole.copy(normal).multiplyScalar(cosine).addScaledVector(tangent, sine);
+      }
+    }
+    const newMiddle = center.addScaledVector(pole, radius);
+    const aim = (joint: THREE.Object3D, origin: THREE.Vector3, tip: THREE.Vector3, goal: THREE.Vector3) => {
+      const delta = new THREE.Quaternion().setFromUnitVectors(tip.sub(origin).normalize(), goal.clone().sub(origin).normalize());
+      const world = delta.multiply(joint.getWorldQuaternion(new THREE.Quaternion()));
+      joint.quaternion.copy(joint.parent!.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world));
+      joint.updateWorldMatrix(false, true);
+    };
+    aim(upper, a, b.clone(), newMiddle);
+    aim(middle, middle.getWorldPosition(b), end.getWorldPosition(c), target);
+    end.quaternion.copy(middle.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(rotation));
+    end.updateWorldMatrix(false, true);
   }
 
   public getSocketWorldPos(name: string, out = new THREE.Vector3()): THREE.Vector3 {

@@ -24,7 +24,10 @@ export interface BallJointAngles {
 }
 
 export interface PoseAngles {
+  /** Right and left hand closure, from open (0) to fist (1). */
+  grip?: [number, number];
   rootPos?: [number, number, number];
+  supportPath?: { spec: Stretch3DSpec; from: PoseId; to: PoseId; weight: number };
   rootYaw?: number;
   rootPitch?: number; // -90 = supine lying on back, +90 = prone
   rootRoll?: number;  // -90 = right-side lying (beach position), +90 = left-side lying
@@ -110,17 +113,38 @@ export interface PhaseInfo {
   stepNumber: number;
   title: string;
   durationSec: number;
+  relaxSec?: number;
   cue: string;
   breathingTip: string;
 }
 
+export type PoseId = PnfPhaseId | 'mistake';
+export type PlantedLimb = 'ankleR' | 'ankleL' | 'wristR' | 'wristL';
+
 export interface Stretch3DSpec {
+  /** End effectors that retain contact during transitions between the authored poses. */
+  planted?: PlantedLimb[];
+  /** Interpolate this contact in a moving bone's frame, e.g. a hand on the nape. */
+  supportBone?: Partial<Record<PlantedLimb, string>>;
+  /** The right elbow slides along the vertical inner face of a door jamb. */
+  elbowOnJamb?: boolean;
+  /** Clearance arc in the support frame for a planted extremity as the palm/sole turns. */
+  supportArc?: { limb: PlantedLimb; offset: [number, number, number]; transitions?: [PoseId, PoseId][] };
   slug: string;
   nameZh: string;
   nameEn: string;
   regionName: string;
   printedPage: number;
   sourcePage: number;
+  technique: {
+    pages: string;
+    /** Without a phase list the support is retained through all four correct steps. */
+    contacts: { at: string; on: string; phases?: PnfPhaseId[] }[];
+    support: string;
+    movement: string;
+    effort: string;
+    resistance: 'hold' | 'move';
+  };
   anatomySummary: {
     originZh: string;
     insertionZh: string;
@@ -140,6 +164,8 @@ export interface Stretch3DSpec {
     deepen: PoseAngles;
     mistake: PoseAngles;
   };
+  // Arm positions on the way from setup to a held pose, including the reverse release.
+  approach?: Partial<Record<'stretch' | 'deepen' | 'mistake', PoseAngles>>;
   mistakeInfo: {
     title: string;
     description: string;

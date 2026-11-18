@@ -30,6 +30,9 @@ export class Overlays3D {
   private overloadRing: THREE.Mesh;
   private overloadRingOuter: THREE.Mesh;
 
+  public angleDeg = 0;
+  private readonly angleMidpoint = new THREE.Vector3();
+  private readonly blocked: { x: number; y: number; w: number; h: number }[] = [];
   private currentSpec: Stretch3DSpec | null = null;
   private readonly projScratch = new THREE.Vector3();
   private readonly labelMetrics = new WeakMap<
@@ -70,7 +73,12 @@ export class Overlays3D {
     this.overloadRingOuter.visible = false;
   }
 
-  public loadStretch(spec: Stretch3DSpec): void {
+  public loadStretch(spec: Stretch3DSpec, mistake = false): void {
+    for (const arrow of this.arrowRuntimes) {
+      arrow.shaft.geometry.dispose();
+      arrow.head.geometry.dispose();
+      (arrow.shaft.material as THREE.Material).dispose();
+    }
     this.currentSpec = spec;
     this.labelMetrics.delete(this.angleLabelEl);
     this.group.clear();
@@ -122,8 +130,8 @@ export class Overlays3D {
     }
 
     // Angle gauge meshes (rebuilt dynamically per frame)
-    this.angleSectorMesh = new THREE.Mesh(
-      new THREE.BufferGeometry(),
+    this.angleSectorMesh ??= new THREE.Mesh(
+      new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(18 * 9, 3)),
       new THREE.MeshBasicMaterial({
         color: 0x38bdf8,
         transparent: true,
@@ -134,8 +142,8 @@ export class Overlays3D {
       })
     );
     this.angleSectorMesh.renderOrder = 8;
-    this.angleArcLine = new THREE.Line(
-      new THREE.BufferGeometry(),
+    this.angleArcLine ??= new THREE.Line(
+      new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(21 * 3, 3)),
       new THREE.LineBasicMaterial({
         color: 0x7dd3fc,
         transparent: true,
@@ -147,7 +155,8 @@ export class Overlays3D {
     this.angleArcLine.renderOrder = 9;
     this.group.add(this.angleSectorMesh, this.angleArcLine);
 
-    this.rebuildCallouts(false);
+    this.angleSectorMesh.frustumCulled = this.angleArcLine.frustumCulled = false;
+    this.rebuildCallouts(mistake);
   }
 
   public rebuildCallouts(isMistake: boolean): void {
@@ -194,10 +203,23 @@ export class Overlays3D {
     phase: PnfPhaseId,
     isMistake: boolean,
     elapsedSec: number,
-    showLabels = true
+    showLabels = true,
+    xray = false,
+    mobile = false,
+    relaxing = false,
+    poseChanged = true
   ): number {
     if (!this.currentSpec) return 0;
 
+    this.blocked.length = 0;
+    if (showLabels) {
+      const contacts = this.currentSpec.technique.contacts.filter(c => !c.phases || c.phases.includes(phase));
+      const names = ['head_crown', 'handL', 'handR', ...contacts.flatMap(c => rig.sockets[c.on] ? [c.at, c.on] : [c.at])];
+      for (const name of names) {
+        const p = rig.getSocketWorldPos(name, this.projScratch).project(camera);
+        this.blocked.push({ x: (p.x + 1) * width / 2, y: (1 - p.y) * height / 2, w: 18, h: 18 });
+      }
+    }
     // 1. Update Overload Ring in mistake mode
     if (isMistake) {
       const wp = rig.getSocketWorldPos(this.currentSpec.mistakeInfo.overloadSocket);
@@ -217,76 +239,43 @@ export class Overlays3D {
 
     // 2. Update 3D Force Arrows
     this.arrowRuntimes.forEach((ar, i) => {
-      const visible = !isMistake && ar.spec.phases.includes(phase);
+      const visible = !isMistake && !relaxing && ar.spec.phases.includes(phase);
       ar.group.visible = visible;
       const lbl = this.arrowLabelEls[i];
-      if (!visible || !showLabels) {
+      if (!visible || !showLabels || !xray || mobile) {
         lbl.style.display = 'none';
         if (!visible) return;
       }
       const origin = rig.getSocketWorldPos(ar.spec.socket);
       const dir = new THREE.Vector3(...ar.spec.direction).normalize();
-      const pulseScale = phase === 'resist' ? 0.92 + 0.16 * Math.sin(elapsedSec * 8.0) : 1.0;
+      const pulseScale = xray && phase === 'resist' ? 0.92 + 0.16 * Math.sin(elapsedSec * 8.0) : 1.0;
       ar.group.position.copy(origin);
       ar.group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       ar.group.scale.set(1, pulseScale, 1);
 
       const len = (ar.spec.length ?? 0.2) * pulseScale;
       ar.tipWorld.copy(origin).addScaledVector(dir, len + 0.03);
-      if (showLabels) {
+      if (showLabels && xray && !mobile) {
         this.projectToScreen(ar.tipWorld, camera, width, height, lbl);
       }
     });
 
     // 3. Update 3D Angle Protractor Arc
     const gSpec = this.currentSpec.angleGauge;
-    const vPos = rig.getSocketWorldPos(gSpec.vertexSocket);
-    const toPos = rig.getSocketWorldPos(gSpec.toSocket);
-    const vRef = new THREE.Vector3(...gSpec.fromDir).normalize();
-    const vCur = toPos.clone().sub(vPos).normalize();
-    const angleRad = Math.acos(THREE.MathUtils.clamp(vRef.dot(vCur), -1, 1));
-    const angleDeg = Math.round((angleRad * 180) / Math.PI);
-
+    if (poseChanged) this.updateGauge(rig, xray);
     if (this.angleSectorMesh && this.angleArcLine) {
-      const radius = gSpec.radius ?? 0.17;
-      const steps = 18;
-      const arcPts: THREE.Vector3[] = [];
-      const triVerts: number[] = [];
-      const axis = new THREE.Vector3().crossVectors(vRef, vCur);
-      if (axis.lengthSq() < 1e-6) axis.set(0, 0, 1);
-      axis.normalize();
-
-      for (let s = 0; s <= steps; s++) {
-        const pt = vRef.clone().applyAxisAngle(axis, (angleRad * s) / steps).multiplyScalar(radius).add(vPos);
-        arcPts.push(pt);
-      }
-      for (let s = 0; s < steps; s++) {
-        triVerts.push(
-          vPos.x, vPos.y, vPos.z,
-          arcPts[s].x, arcPts[s].y, arcPts[s].z,
-          arcPts[s + 1].x, arcPts[s + 1].y, arcPts[s + 1].z
-        );
-      }
-      this.angleSectorMesh.geometry.dispose();
-      const sGeo = new THREE.BufferGeometry();
-      sGeo.setAttribute('position', new THREE.Float32BufferAttribute(triVerts, 3));
-      this.angleSectorMesh.geometry = sGeo;
-
-      this.angleArcLine.geometry.dispose();
-      this.angleArcLine.geometry = new THREE.BufferGeometry().setFromPoints([vPos, ...arcPts, vPos]);
-
-      if (showLabels) {
-        const midPt = arcPts[Math.floor(steps / 2)].clone().lerp(vPos, -0.28);
-        this.angleLabelEl.textContent = `${gSpec.labelPrefix} ${angleDeg}°`;
-        this.projectToScreen(midPt, camera, width, height, this.angleLabelEl);
-      } else {
-        this.angleLabelEl.style.display = 'none';
+      this.angleSectorMesh.visible = this.angleArcLine.visible = xray;
+      this.angleLabelEl.style.display = 'none';
+      if (xray && showLabels && !mobile) {
+        this.angleLabelEl.textContent = `${gSpec.labelPrefix} ${this.angleDeg}°`;
+        this.projectToScreen(this.angleMidpoint, camera, width, height, this.angleLabelEl);
       }
     }
 
-    // 4. Project Callouts
+    // The compact view leaves the teaching cue below the canvas and allows one optional marker.
+    let placed = 0;
     for (const item of this.calloutEls) {
-      if (!showLabels || (item.spec.phases && !item.spec.phases.includes(phase))) {
+      if (!showLabels || (mobile && placed > 0) || (!xray && !['lock', 'warning'].includes(item.spec.kind)) || (item.spec.phases && !item.spec.phases.includes(phase))) {
         item.el.style.display = 'none';
         continue;
       }
@@ -297,9 +286,47 @@ export class Overlays3D {
         wp.z += item.spec.offset[2];
       }
       this.projectToScreen(wp, camera, width, height, item.el);
+      if (item.el.style.display !== 'none') placed++;
     }
 
-    return angleDeg;
+    return this.angleDeg;
+  }
+
+  private updateGauge(rig: HumanRig, xray: boolean): void {
+    const gSpec = this.currentSpec!.angleGauge;
+    const vPos = rig.getSocketWorldPos(gSpec.vertexSocket);
+    const toPos = rig.getSocketWorldPos(gSpec.toSocket);
+    const vRef = new THREE.Vector3(...gSpec.fromDir).normalize();
+    const vCur = toPos.clone().sub(vPos).normalize();
+    const angleRad = Math.acos(THREE.MathUtils.clamp(vRef.dot(vCur), -1, 1));
+    const angleDeg = Math.round((angleRad * 180) / Math.PI);
+
+    this.angleDeg = angleDeg;
+    if (xray && this.angleSectorMesh && this.angleArcLine) {
+      const radius = gSpec.radius ?? 0.17;
+      const steps = 18;
+      const axis = new THREE.Vector3().crossVectors(vRef, vCur);
+      if (axis.lengthSq() < 1e-6) axis.set(0, 0, 1);
+      axis.normalize();
+      const sector = this.angleSectorMesh.geometry.getAttribute('position');
+      const arc = this.angleArcLine.geometry.getAttribute('position');
+      const point = new THREE.Vector3(), previous = new THREE.Vector3();
+      arc.setXYZ(0, vPos.x, vPos.y, vPos.z);
+      for (let i = 0; i <= steps; i++) {
+        point.copy(vRef).applyAxisAngle(axis, angleRad * i / steps).multiplyScalar(radius).add(vPos);
+        arc.setXYZ(i + 1, point.x, point.y, point.z);
+        if (i > 0) {
+          const j = (i - 1) * 3;
+          sector.setXYZ(j, vPos.x, vPos.y, vPos.z);
+          sector.setXYZ(j + 1, previous.x, previous.y, previous.z);
+          sector.setXYZ(j + 2, point.x, point.y, point.z);
+        }
+        if (i === steps / 2) this.angleMidpoint.copy(point);
+        previous.copy(point);
+      }
+      arc.setXYZ(steps + 2, vPos.x, vPos.y, vPos.z);
+      arc.needsUpdate = sector.needsUpdate = true;
+    }
   }
 
   private projectToScreen(
@@ -335,10 +362,18 @@ export class Overlays3D {
     const minY = padY + metrics.halfH;
     const maxY = height - padY - metrics.halfH;
 
-    const x = minX <= maxX ? THREE.MathUtils.clamp(rawX, minX, maxX) : width * 0.5;
-    const y = minY <= maxY ? THREE.MathUtils.clamp(rawY, minY, maxY) : height * 0.5;
-
-    el.style.left = `${Math.round(x)}px`;
-    el.style.top = `${Math.round(y)}px`;
+    const clamp = THREE.MathUtils.clamp;
+    for (const dy of [0, -32, 32, -64, 64]) {
+      for (const dx of [0, -64, 64, -128, 128]) {
+        const x = clamp(rawX + dx, minX, maxX), y = clamp(rawY + dy, minY, maxY);
+        if (this.blocked.some(r => Math.abs(r.x - x) < r.w + metrics.halfW + 4 &&
+            Math.abs(r.y - y) < r.h + metrics.halfH + 4)) continue;
+        this.blocked.push({x, y, w: metrics.halfW, h: metrics.halfH});
+        el.style.left = `${Math.round(x)}px`;
+        el.style.top = `${Math.round(y)}px`;
+        return;
+      }
+    }
+    el.style.display = 'none';
   }
 }

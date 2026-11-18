@@ -7,6 +7,10 @@ interface FascicleRuntime {
   mesh: THREE.Mesh;
   originPin: THREE.Mesh;
   insertionPin: THREE.Mesh;
+  sockets: string[];
+  curve: THREE.CatmullRomCurve3;
+  samples: THREE.Vector3[];
+  frames?: ReturnType<THREE.Curve<THREE.Vector3>['computeFrenetFrames']>;
   restLength: number;
   maxLength: number;
   currentLength: number;
@@ -25,7 +29,7 @@ const SYNERGIST_BELLY = new THREE.Color(0xa18c90);
 export class MuscleSystem {
   public readonly group = new THREE.Group();
   private items: FascicleRuntime[] = [];
-  private tmpPts: THREE.Vector3[] = [];
+
 
   private readonly pinOriginMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
   private readonly pinInsertMat = new THREE.MeshBasicMaterial({ color: 0xfb7185 });
@@ -67,9 +71,11 @@ export class MuscleSystem {
         this.group.add(insertionPin);
       }
 
-      const len = this.measurePathLength(spec, rig);
+      const sockets = [spec.origin, ...(spec.via ?? []), spec.insertion];
+      const curve = new THREE.CatmullRomCurve3(sockets.map(name => rig.getSocketWorldPos(name)), false, 'catmullrom', 0.35);
+      const len = curve.getLength();
       this.items.push({
-        spec,
+        spec, sockets, curve, samples: [],
         mesh,
         originPin,
         insertionPin,
@@ -97,21 +103,17 @@ export class MuscleSystem {
   public measureAll(rig: HumanRig): Record<string, number> {
     const out: Record<string, number> = {};
     for (const item of this.items) {
-      const len = this.measurePathLength(item.spec, rig);
-      item.currentLength = len;
-      out[item.spec.id] = len;
+      this.updatePath(item, rig);
+      out[item.spec.id] = item.currentLength;
     }
     return out;
   }
 
-  private measurePathLength(spec: FascicleSpec, rig: HumanRig): number {
-    const names = [spec.origin, ...(spec.via ?? []), spec.insertion];
-    const pts = names.map((n) => rig.getSocketWorldPos(n, new THREE.Vector3()));
-    let sum = 0;
-    for (let i = 1; i < pts.length; i++) {
-      sum += pts[i].distanceTo(pts[i - 1]);
-    }
-    return sum;
+  private updatePath(item: FascicleRuntime, rig: HumanRig): void {
+    item.sockets.forEach((name, index) => rig.getSocketWorldPos(name, item.curve.points[index]));
+    item.curve.updateArcLengths();
+    item.currentLength = item.curve.getLength();
+    item.frames = undefined;
   }
 
   private createSpindleGeometry(tendonRatio: number): THREE.BufferGeometry {
@@ -154,7 +156,9 @@ export class MuscleSystem {
     rig: HumanRig,
     phase: PnfPhaseId,
     isMistake: boolean,
-    elapsedSec: number
+    elapsedSec: number,
+    poseChanged = true,
+    drawFibers = true
   ): { strainRatio: number; elongationPct: number } {
     let strainSum = 0;
     let primaryCount = 0;
@@ -167,15 +171,8 @@ export class MuscleSystem {
       const isNerve = spec.role === 'nerve';
       const isSynergist = spec.role === 'synergist';
       const tendonCol = isSynergist ? SYNERGIST_TENDON : IVORY_TENDON;
-      const socketNames = [spec.origin, ...(spec.via ?? []), spec.insertion];
-      this.tmpPts = socketNames.map((n) => rig.getSocketWorldPos(n, new THREE.Vector3()));
-
-      originPin.position.copy(this.tmpPts[0]);
-      insertionPin.position.copy(this.tmpPts[this.tmpPts.length - 1]);
-
-      const curve = new THREE.CatmullRomCurve3(this.tmpPts, false, 'catmullrom', 0.35);
-      const len = curve.getLength();
-      item.currentLength = len;
+      if (poseChanged) this.updatePath(item, rig);
+      const { curve, currentLength: len } = item;
 
       const rawStrain = THREE.MathUtils.clamp(
         (len - item.restLength) / Math.max(0.012, item.maxLength - item.restLength),
@@ -218,19 +215,27 @@ export class MuscleSystem {
         primaryCount += 1;
       }
 
-      const frames = curve.computeFrenetFrames(TUBULAR_SEGMENTS, false);
+      if (!drawFibers) continue;
+      originPin.position.copy(curve.points[0]);
+      insertionPin.position.copy(curve.points[curve.points.length - 1]);
+      if (!item.frames) {
+        item.frames = curve.computeFrenetFrames(TUBULAR_SEGMENTS, false);
+        for (let i = 0; i <= TUBULAR_SEGMENTS; i++) {
+          curve.getPointAt(i / TUBULAR_SEGMENTS, item.samples[i] ??= new THREE.Vector3());
+        }
+      }
+      const frames = item.frames;
       const posAttr = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
       const normAttr = mesh.geometry.getAttribute('normal') as THREE.BufferAttribute;
       const colAttr = mesh.geometry.getAttribute('color') as THREE.BufferAttribute;
       const uvAttr = mesh.geometry.getAttribute('uv');
 
       let idx = 0;
-      const pt = new THREE.Vector3();
       const normal = new THREE.Vector3();
 
       for (let i = 0; i <= TUBULAR_SEGMENTS; i++) {
         const u = i / TUBULAR_SEGMENTS;
-        curve.getPointAt(u, pt);
+        const pt = item.samples[i];
         const N = frames.normals[i];
         const B = frames.binormals[i];
 
@@ -287,7 +292,7 @@ export class MuscleSystem {
       item.mesh.geometry.dispose();
       (item.mesh.material as THREE.Material).dispose();
       item.originPin.geometry.dispose();
-      item.insertionPin.geometry.dispose();
+
     }
     this.items = [];
     this.group.clear();

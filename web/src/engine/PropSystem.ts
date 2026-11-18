@@ -9,7 +9,13 @@ import type { PropSpec } from './types';
  */
 export class PropSystem {
   public readonly group = new THREE.Group();
-  private dynamicLinks: { sockets: string[]; mesh: THREE.Mesh }[] = [];
+  private dynamicLinks: { sockets: string[]; mesh: THREE.InstancedMesh; curve: THREE.CatmullRomCurve3 }[] = [];
+  private readonly segment = new THREE.Object3D();
+  private readonly start = new THREE.Vector3();
+  private readonly end = new THREE.Vector3();
+  private readonly direction = new THREE.Vector3();
+  private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly edgeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.5 });
   private translucentPanels: THREE.Mesh[] = [];
   private readonly panelPos = new THREE.Vector3();
   private readonly panelNormal = new THREE.Vector3();
@@ -19,24 +25,28 @@ export class PropSystem {
   private readonly humanVec = new THREE.Vector3();
 
   private readonly woodMat = new THREE.MeshStandardMaterial({
-    color: 0x3b4958,
+    color: 0x75848c,
     roughness: 0.65,
     metalness: 0.08,
   });
 
   private readonly metalMat = new THREE.MeshStandardMaterial({
-    color: 0x64748b,
+    color: 0x8996a3,
     roughness: 0.4,
     metalness: 0.35,
   });
 
   private readonly wallMat = new THREE.MeshStandardMaterial({
-    color: 0x334155,
+    color: 0x758da0,
     roughness: 0.78,
     metalness: 0.05,
     transparent: true,
     opacity: 0.52,
     depthWrite: false,
+  });
+
+  private readonly nearWallMat = new THREE.MeshStandardMaterial({
+    color: 0x9fb6c5, transparent: true, opacity: 0.12, depthWrite: false, roughness: 0.8,
   });
 
   private readonly strapMat = new THREE.MeshStandardMaterial({
@@ -49,9 +59,12 @@ export class PropSystem {
     this.clear();
     for (const spec of specs) {
       if (spec.attachSockets && spec.attachSockets.length >= 2) {
-        const mesh = new THREE.Mesh(new THREE.BufferGeometry(), this.strapMat);
+        const segments = spec.attachSockets.length === 2 ? 1 : 18;
+        const mesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.009, 0.009, 1, 8), this.strapMat, segments);
+        mesh.frustumCulled = false;
+        const curve = new THREE.CatmullRomCurve3(spec.attachSockets.map(() => new THREE.Vector3()), false, 'catmullrom', 0.25);
         this.group.add(mesh);
-        this.dynamicLinks.push({ sockets: spec.attachSockets, mesh });
+        this.dynamicLinks.push({ sockets: spec.attachSockets, mesh, curve });
         continue;
       }
       const obj = this.buildProp(spec.type);
@@ -64,12 +77,22 @@ export class PropSystem {
     }
   }
 
-  public updateDynamicProps(rig: HumanRig, camera?: THREE.Camera): void {
+  public updateDynamicProps(rig: HumanRig, camera?: THREE.Camera, poseChanged = true): void {
     for (const link of this.dynamicLinks) {
-      const pts = link.sockets.map((s) => rig.getSocketWorldPos(s, new THREE.Vector3()));
-      const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.25);
-      link.mesh.geometry.dispose();
-      link.mesh.geometry = new THREE.TubeGeometry(curve, 18, 0.009, 8, false);
+      if (!poseChanged) break;
+      link.sockets.forEach((name, i) => rig.getSocketWorldPos(name, link.curve.points[i]));
+      this.start.copy(link.curve.points[0]);
+      for (let i = 0; i < link.mesh.count; i++) {
+        link.curve.getPoint((i + 1) / link.mesh.count, this.end);
+        this.direction.subVectors(this.end, this.start);
+        this.segment.scale.set(1, this.direction.length(), 1);
+        this.segment.quaternion.setFromUnitVectors(this.up, this.direction.normalize());
+        this.segment.position.lerpVectors(this.start, this.end, 0.5);
+        this.segment.updateMatrix();
+        link.mesh.setMatrixAt(i, this.segment.matrix);
+        this.start.copy(this.end);
+      }
+      link.mesh.instanceMatrix.needsUpdate = true;
     }
     if (camera && this.translucentPanels.length > 0) {
       this.group.updateMatrixWorld(true);
@@ -81,20 +104,28 @@ export class PropSystem {
         this.panelNormal.set(0, 0, 1).transformDirection(panel.matrixWorld);
         const camSide = this.camVec.subVectors(camera.position, this.panelPos).dot(this.panelNormal);
         const humanSide = this.humanVec.subVectors(this.trunkCenter, this.panelPos).dot(this.panelNormal);
-        // HumanSurfaceDepth/HumanSurface use renderOrder 1..2; draw translucent walls before (0)
-        // when behind the body, or after (3) when the camera views the body through the wall.
-        panel.renderOrder = camSide * humanSide < 0 ? 3 : 0;
+        const inFront = camSide * humanSide < 0;
+        panel.material = inFront ? this.nearWallMat : this.wallMat;
+        panel.renderOrder = inFront ? 3 : 0;
       }
     }
   }
 
   public clear(): void {
-    for (const l of this.dynamicLinks) {
-      l.mesh.geometry.dispose();
-    }
+    const geometries = new Set<THREE.BufferGeometry>();
+    this.group.traverse(object => {
+      if (object instanceof THREE.Mesh) geometries.add(object.geometry);
+      if (object instanceof THREE.InstancedMesh) object.dispose();
+    });
+    geometries.forEach(geometry => geometry.dispose());
     this.dynamicLinks = [];
     this.translucentPanels = [];
     this.group.clear();
+  }
+
+  public dispose(): void {
+    this.clear();
+    for (const mat of [this.woodMat, this.metalMat, this.wallMat, this.nearWallMat, this.edgeMat, this.strapMat]) mat.dispose();
   }
 
   private buildProp(type: PropSpec['type']): THREE.Group {
@@ -157,9 +188,9 @@ export class PropSystem {
         g.add(block);
         const strip = new THREE.Mesh(
           new THREE.BoxGeometry(0.562, 0.012, 0.04),
-          new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.5 })
+          this.edgeMat
         );
-        strip.position.set(0, 0.162, 0.045);
+        strip.position.set(0, 0.154, 0.06);
         g.add(strip);
         break;
       }

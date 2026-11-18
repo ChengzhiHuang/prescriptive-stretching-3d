@@ -1,6 +1,5 @@
 import './styles.css';
-import { ALL_STRETCH_3D_LIST, STRETCH_3D_SPECS } from './data/stretches';
-import { Stage3D, StageTelemetry } from './engine/Stage3D';
+import type { Stage3D, StageTelemetry } from './engine/Stage3D';
 import type { BookIndexData, BookStretchEntry, PnfPhaseId, Stretch3DSpec } from './engine/types';
 
 type SidebarTab = 'stretches' | 'pains';
@@ -13,7 +12,13 @@ const PHASES: PnfPhaseId[] = ['setup', 'stretch', 'resist', 'deepen'];
 const SHORT_PHASES = ['定姿', '拉伸', '抗阻', '加深'];
 const SPEEDS = [1.0, 0.5, 1.5];
 
+const regions = import.meta.glob<{ default: Stretch3DSpec[] }>('./data/stretches/regions/*.ts');
+
 class Pure3DCompanionApp {
+  private selection = 0;
+  private pendingSlug?: string;
+  private retrySelection?: () => Promise<boolean>;
+  private stageRequest = 0;
   private bookIndex?: BookIndexData;
   private stage3D?: Stage3D;
   private stageState: StageState = 'loading';
@@ -33,7 +38,7 @@ class Pure3DCompanionApp {
   private telemetry?: StageTelemetry;
 
   private activeSlug = 'upper-trapezius';
-  private active3DSpec: Stretch3DSpec = ALL_STRETCH_3D_LIST[0];
+  private active3DSpec?: Stretch3DSpec;
   private sidebarTab: SidebarTab = 'stretches';
   private searchQuery = '';
   private activePainIndex = -1;
@@ -98,16 +103,19 @@ class Pure3DCompanionApp {
       this.setStageState('unavailable', '暂时无法加载动作目录。');
       return;
     }
-    if (!this.handleHashChange()) this.selectStretch(this.activeSlug);
-    this.setStageState('loading');
-    requestAnimationFrame(() => this.prepareStage());
+    void this.prepareStage();
+    this.renderSidebarList();
+    if (!this.handleHashChange()) void this.selectStretch(this.activeSlug);
   }
 
-  private prepareStage(): void {
+  private async prepareStage(): Promise<void> {
+    const request = ++this.stageRequest;
     this.stage3D?.dispose();
     this.stage3D = undefined;
     this.setStageState('loading');
     try {
+      const { Stage3D } = await import('./engine/Stage3D');
+      if (request !== this.stageRequest) return;
       const stage = new Stage3D(
         document.getElementById('stage3d-canvas')!,
         document.getElementById('stage3d-overlays')!,
@@ -121,15 +129,15 @@ class Pure3DCompanionApp {
       );
       this.stage3D = stage;
       stage.onTelemetry = (t) => this.handleTelemetry(t);
-      stage.loadStretch(this.active3DSpec, this.phase, this.mistakeMode);
+      stage.setPlaying(this.playing);
+      if (this.active3DSpec) stage.loadStretch(this.active3DSpec, this.phase, this.mistakeMode);
       if (this.selectedCamera === -1) {
         stage.fitFullBody(true);
       } else if (this.selectedCamera !== undefined) {
-        const camera = this.active3DSpec.cameras[this.selectedCamera];
+        const camera = this.active3DSpec?.cameras[this.selectedCamera];
         if (camera) stage.setCameraPreset(camera, true);
       }
       this.syncCameraSelectionFromStage();
-      stage.setPlaying(this.playing);
       stage.setSpeed(SPEEDS[this.speedIndex]);
       stage.setXrayMode(this.xray);
       stage.setShowLabels(this.labelsVisible);
@@ -242,7 +250,7 @@ class Pure3DCompanionApp {
                 </div>
               </div>
             </div>
-            <div class="mobile-gesture-hint mobile-only">单指旋转 <span>·</span> 双指缩放</div>
+            <div class="stage-cue" id="stage-cue"></div>
             <div class="viewport-hud-bottom">
               <button type="button" class="hud-play-btn" id="btn-play-pause" data-needs-stage>⏸ 暂停</button>
               <div class="hud-mini-steps" id="hud-mini-steps" role="group" aria-label="动作阶段">
@@ -541,7 +549,8 @@ class Pure3DCompanionApp {
       if (event.target === this.sheetEl) this.closeMobilePanel();
     });
     onClick('btn-retry-stage', () => {
-      if (this.bookIndex) this.prepareStage();
+      if (this.retrySelection) void this.retrySelection();
+      else if (this.bookIndex) void this.prepareStage();
       else void this.loadBookIndex();
     });
     onClick('btn-fallback-steps', (e) => {
@@ -629,7 +638,7 @@ class Pure3DCompanionApp {
       this.vStepTips.push(card.querySelector('.v-step-tip') as HTMLElement);
       this.vStepBars.push(card.querySelector('.v-step-progress') as HTMLElement);
       card.addEventListener('click', () => {
-        if (!this.mobileMedia.matches && this.bookIndex) this.jumpToPhase(PHASES[idx], false);
+        if (!this.mobileMedia.matches && this.bookIndex) this.jumpToPhase(PHASES[idx], true);
       });
       header.addEventListener('click', () => {
         if (!this.mobileMedia.matches) return;
@@ -648,7 +657,7 @@ class Pure3DCompanionApp {
       this.hudStepPills.push(pill);
       this.hudStepMobileLabels.push(pill.querySelector('.hud-step-mobile-label') as HTMLElement);
       this.hudStepBars.push(pill.querySelector('.hud-step-bar') as HTMLElement);
-      pill.addEventListener('click', () => this.jumpToPhase(PHASES[idx], this.mobileMedia.matches));
+      pill.addEventListener('click', () => this.jumpToPhase(PHASES[idx], true));
     });
 
     this.hudPlayBtnEl.addEventListener('click', () => {
@@ -846,7 +855,7 @@ class Pure3DCompanionApp {
   private stepStretch(delta: -1 | 1): void {
     const entries = this.bookIndex?.stretches;
     if (!entries?.length) return;
-    const curIdx = entries.findIndex((s) => s.slug === this.activeSlug);
+    const curIdx = entries.findIndex((s) => s.slug === (this.pendingSlug ?? this.activeSlug));
     const nextIdx = (curIdx + delta + entries.length) % entries.length;
     this.selectStretch(entries[nextIdx].slug);
   }
@@ -865,23 +874,40 @@ class Pure3DCompanionApp {
     if (syncHash) this.syncUrlHash();
   }
 
-  public selectStretch(
+  public async selectStretch(
     slug: string,
     opts: { initialPhase?: PnfPhaseId; mistake?: boolean; keepHash?: boolean } = {}
-  ): boolean {
+  ): Promise<boolean> {
     const entry = this.bookIndex?.stretches.find((s) => s.slug === slug);
-    const spec = STRETCH_3D_SPECS[slug];
-    if (!entry || !spec) return false;
+    if (!entry) return false;
+    const request = ++this.selection;
+    this.pendingSlug = slug;
+    this.retrySelection = undefined;
+    let spec: Stretch3DSpec | undefined;
+    try {
+      const region = await regions[`./data/stretches/regions/${entry.regionId}.ts`]();
+      if (request !== this.selection) return false;
+      spec = region.default.find((item) => item.slug === slug);
+      if (!spec) throw new Error('动作数据缺失');
+    } catch (error) {
+      if (request === this.selection) {
+        this.retrySelection = () => this.selectStretch(slug, opts);
+        this.setStageState('unavailable', '动作加载失败，请重试。');
+      }
+      return false;
+    }
+    this.pendingSlug = undefined;
 
     this.activeSlug = slug;
     this.active3DSpec = spec;
     this.selectedCamera = undefined;
-    this.phase = opts.initialPhase ?? 'stretch';
+    this.phase = opts.initialPhase ?? 'setup';
     this.expandedPhase = this.phase;
     this.telemetry = undefined;
     this.renderCoachStaticMetadata(spec, entry);
     try {
       this.stage3D?.loadStretch(spec, this.phase, opts.mistake ?? false);
+      if (this.stage3D && this.stageState === 'unavailable') this.setStageState('ready');
     } catch (error) {
       this.reportStageError(error);
     }
@@ -895,7 +921,7 @@ class Pure3DCompanionApp {
   }
 
   private renderCoachStaticMetadata(spec: Stretch3DSpec, entry: BookStretchEntry): void {
-    this.coachEyebrowEl.textContent = `${entry.regionName} · 动作 #${String(entry.order).padStart(2, '0')}/40 · 原书第 ${entry.printedPage} 页`;
+    this.coachEyebrowEl.textContent = `${entry.regionName} · 动作 #${String(entry.order).padStart(2, '0')}/40 · 原书第 ${spec.technique.pages} 页`;
     this.coachTitleEl.innerHTML = `${spec.nameZh} <small>${spec.nameEn}</small>`;
     const title = document.getElementById('mobile-action-name')!;
     title.textContent = spec.nameZh;
@@ -953,7 +979,7 @@ class Pure3DCompanionApp {
   private syncCameraSelectionFromStage(): void {
     if (!this.stage3D) return;
     const activePreset = this.stage3D.getActivePreset();
-    const idx = activePreset ? this.active3DSpec.cameras.indexOf(activePreset) : -1;
+    const idx = activePreset ? (this.active3DSpec?.cameras.indexOf(activePreset) ?? -1) : -1;
     this.syncCameraSelection(idx);
   }
 
@@ -966,9 +992,15 @@ class Pure3DCompanionApp {
 
   private renderPlayback(): void {
     const spec = this.active3DSpec;
+    if (!spec) return;
     const t = this.telemetry?.phase === this.phase && this.telemetry.isMistake === this.mistakeMode
       ? this.telemetry
       : undefined;
+    const guide = spec.technique;
+    const cue = this.mistakeMode ? spec.mistakeInfo.title : t?.relaxing ? '保持支点，放松肌肉，自然呼吸'
+      : this.phase === 'setup' ? guide.support : this.phase === 'resist' ? guide.effort : guide.movement;
+    const cueEl = document.getElementById('stage-cue')!;
+    if (cueEl.textContent !== cue) cueEl.textContent = cue;
     const playLabel = this.playing ? '⏸ 暂停' : '▶ 播放';
     if (this.hudPlayBtnEl.textContent !== playLabel) this.hudPlayBtnEl.textContent = playLabel;
     const phaseIndex = PHASES.indexOf(this.phase);
@@ -995,10 +1027,10 @@ class Pure3DCompanionApp {
       this.hudStepBars[idx].style.width = barWidth;
 
       const remSec = active && t ? Math.ceil(t.phaseRemainingSec) : spec.phases[idx].durationSec;
-      const timer = `${remSec}s`;
+      const timer = active && t?.relaxing ? `放松 ${remSec}s` : `${remSec}s`;
       if (this.vStepTimers[idx].textContent !== timer) this.vStepTimers[idx].textContent = timer;
 
-      const mobileLabel = active ? `${idx + 1} ${SHORT_PHASES[idx]} · ${remSec}s` : `${idx + 1} ${SHORT_PHASES[idx]}`;
+      const mobileLabel = active ? `${idx + 1} ${SHORT_PHASES[idx]} · ${timer}` : `${idx + 1} ${SHORT_PHASES[idx]}`;
       if (this.hudStepMobileLabels[idx].textContent !== mobileLabel) {
         this.hudStepMobileLabels[idx].textContent = mobileLabel;
       }
@@ -1006,12 +1038,15 @@ class Pure3DCompanionApp {
   }
 
   private handleTelemetry(t: StageTelemetry): void {
+    const previous = this.telemetry;
     this.telemetry = t;
+    const secondsChanged = Math.ceil(t.phaseRemainingSec) !== Math.ceil(previous?.phaseRemainingSec ?? -1);
+    const clockChanged = secondsChanged || t.phase !== previous?.phase || t.relaxing !== previous?.relaxing;
     const now = performance.now();
-    if (this.mobileMedia.matches && t.phase === this.phase && now - this.lastTelemetry < 80) return;
+    if (!clockChanged && now - this.lastTelemetry < 95) return;
     this.lastTelemetry = now;
     this.phase = t.phase;
-    this.renderPlayback();
+    if (clockChanged) this.renderPlayback();
 
     // Update compact strain bar
     const pctWidth = t.isMistake ? 16 : Math.min(100, Math.round(18 + t.strainRatio * 78));
@@ -1019,8 +1054,11 @@ class Pure3DCompanionApp {
     if (t.isMistake) {
       this.strainTextEl.textContent = `⚠️ 代偿泄力 +${t.elongationPct.toFixed(1)}%`;
       this.strainTextEl.style.color = '#fda4af';
+    } else if (t.relaxing) {
+      this.strainTextEl.textContent = '放松';
+      this.strainTextEl.style.color = '#a7f3d0';
     } else if (t.phase === 'resist') {
-      this.strainTextEl.textContent = `⚡ 等长抗阻中`;
+      this.strainTextEl.textContent = this.active3DSpec?.technique.resistance === 'move' ? '主动抗阻' : '等长抗阻';
       this.strainTextEl.style.color = '#fde68a';
     } else {
       this.strainTextEl.textContent = `牵拉 +${t.elongationPct.toFixed(1)}%`;
@@ -1031,19 +1069,18 @@ class Pure3DCompanionApp {
   private handleHashChange(): boolean {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const slug = params.get('stretch');
-    if (!slug) return false;
+    if (!this.bookIndex?.stretches.some(entry => entry.slug === slug) || !slug) return false;
     const initialPhase = PHASES.find((phase) => phase === params.get('phase'));
     if (initialPhase) {
       this.playing = false;
       this.stage3D?.setPlaying(false);
     }
-    const ok = this.selectStretch(slug, {
+    void this.selectStretch(slug, {
       initialPhase,
       mistake: params.get('mode') === 'mistake',
       keepHash: true,
     });
-    if (ok) this.renderPlayback();
-    return ok;
+    return true;
   }
 }
 

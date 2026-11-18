@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ContactShadows } from './ContactShadows';
-import { HumanRig, interpolatePoses } from './HumanRig';
+import { HumanRig, sampleTransition } from './HumanRig';
 import { MuscleSystem } from './MuscleSystem';
 import { Overlays3D } from './Overlays3D';
 import { PropSystem } from './PropSystem';
@@ -12,6 +12,7 @@ export interface StageTelemetry {
   phaseIndex: number;
   phaseRemainingSec: number;
   phaseDurationSec: number;
+  relaxing: boolean;
   phaseProgress: number;
   angleDeg: number;
   strainRatio: number;
@@ -28,6 +29,7 @@ interface StageOptions {
   onRenderError?: (error: unknown) => void;
 }
 
+const TRANSITION_SECONDS = 1.2;
 const PHASE_ORDER: PnfPhaseId[] = ['setup', 'stretch', 'resist', 'deepen'];
 
 const BODY_EXTENT_SOCKETS: ReadonlyArray<{ name: string; radius: number; yBias?: number }> = [
@@ -93,6 +95,15 @@ export class Stage3D {
   } | null = null;
 
   private rafId = 0;
+  private holdTimer = 0;
+  private stageDirty = true;
+  private lastPose?: PoseAngles;
+  private lastSample = NaN;
+  private lastPhase?: PnfPhaseId;
+  private relaxing = false;
+  private mistakeElapsed = 0;
+  private xray = false;
+  private muscleReading = { strainRatio: 0, elongationPct: 0 };
   private lastTime = 0;
   private totalElapsed = 0;
   private viewportWidth = 0;
@@ -102,7 +113,6 @@ export class Stage3D {
   private contextLost = false;
   private renderFailed = false;
   private hasRendered = false;
-  private surfaceRequested = false;
   private resizeObserver: ResizeObserver;
   public onTelemetry?: (t: StageTelemetry) => void;
 
@@ -136,6 +146,7 @@ export class Stage3D {
     this.controls.minDistance = 0.65;
     this.controls.maxDistance = this.mobile ? 10 : 6.5;
     this.controls.target.set(0, 0.9, 0);
+    this.controls.addEventListener('change', this.invalidate);
     this.controls.addEventListener('start', () => {
       this.userMovedCamera = true;
       this.camTransition = null;
@@ -178,6 +189,7 @@ export class Stage3D {
     this.props = new PropSystem();
     this.rig = new HumanRig();
     this.muscles = new MuscleSystem();
+    this.muscles.group.visible = this.xray;
     this.overlays = new Overlays3D(overlayContainer);
 
     this.scene.add(this.props.group);
@@ -190,6 +202,7 @@ export class Stage3D {
     this.resizeObserver.observe(canvasContainer);
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
     this.handleResize();
+    void this.loadHumanSurface();
     this.resumeFrames();
   }
 
@@ -200,6 +213,13 @@ export class Stage3D {
     this.phaseElapsed = 0;
     this.userMovedCamera = false;
 
+    this.lastPose = undefined;
+    this.lastPhase = undefined;
+    this.relaxing = false;
+    this.mistakeElapsed = this.isPlaying ? 0 : 1.2;
+    this.lastTime = performance.now();
+    this.invalidate();
+    this.rig.setTargetMuscles(spec.fascicles);
     this.props.setProps(spec.props);
     this.muscles.loadFascicles(spec.fascicles, this.rig);
 
@@ -213,8 +233,7 @@ export class Stage3D {
     // Sample full-body 3D bounding points across all key poses for smart camera auto-framing
     this.sampleActionBodyBounds(spec);
 
-    this.overlays.loadStretch(spec);
-    this.overlays.rebuildCallouts(this.isMistake);
+    this.overlays.loadStretch(spec, this.isMistake);
 
     this.activePreset = spec.cameras[0] ?? null;
     if (this.activePreset) {
@@ -242,8 +261,8 @@ export class Stage3D {
       resist,
       deepen,
       mistake,
-      interpolatePoses(setup, stretch, 0.5),
-      interpolatePoses(resist, deepen, 0.5),
+      sampleTransition(spec, 'setup', 'stretch', 0.5),
+      sampleTransition(spec, 'resist', 'deepen', 0.5),
     ];
     const tmp = new THREE.Vector3();
     const boxMin = new THREE.Vector3();
@@ -365,7 +384,7 @@ export class Stage3D {
 
     const isPrimaryPreset = preset === this.currentSpec?.cameras[0];
     const isFocusedCloseup =
-      preset.label.includes('特写') || (!isPrimaryPreset && viewDir.length() < 1.52);
+      !isPrimaryPreset && (preset.label.includes('特写') || viewDir.length() < 1.52);
     let finalPos: THREE.Vector3;
     let finalTarget: THREE.Vector3;
 
@@ -389,6 +408,7 @@ export class Stage3D {
   }
 
   private moveCamera(pos: THREE.Vector3, target: THREE.Vector3, instant: boolean): void {
+    this.invalidate();
     if (instant) {
       this.camera.position.copy(pos);
       this.controls.target.copy(target);
@@ -423,7 +443,12 @@ export class Stage3D {
     const idx = PHASE_ORDER.indexOf(phase);
     if (idx >= 0) {
       this.phaseIndex = idx;
+      this.lastPose = undefined;
       this.phaseElapsed = 0;
+      this.relaxing = false;
+      if (this.isMistake) this.mistakeElapsed = 1.2;
+      this.lastTime = performance.now();
+      this.invalidate();
       if (pauseAuto) {
         this.isPlaying = false;
       }
@@ -431,34 +456,49 @@ export class Stage3D {
   }
 
   public setPlaying(playing: boolean): void {
+    this.captureTime();
     this.isPlaying = playing;
+    this.invalidate();
   }
 
   public setPlaybackSuspended(suspended: boolean): void {
+    this.captureTime();
     this.playbackSuspended = suspended;
+    this.invalidate();
   }
 
   public togglePlaying(): boolean {
-    this.isPlaying = !this.isPlaying;
+    this.setPlaying(!this.isPlaying);
     return this.isPlaying;
   }
 
   public setSpeed(speed: number): void {
+    this.captureTime();
     this.speed = speed;
+    this.invalidate();
   }
 
   public setMistakeMode(mistake: boolean): void {
     if (this.isMistake === mistake) return;
     this.isMistake = mistake;
+    this.mistakeElapsed = this.isPlaying ? 0 : 1.2;
+    this.lastPose = undefined;
+    this.invalidate();
     this.overlays.rebuildCallouts(mistake);
   }
 
   public setShowLabels(show: boolean): void {
     this.showLabels = show;
+    this.invalidate();
   }
 
   public setXrayMode(xray: boolean): void {
+    if (this.xray === xray) return;
+    this.xray = xray;
+    this.muscles.group.visible = xray;
     this.rig.setXrayMode(xray);
+    this.lastPose = undefined;
+    this.invalidate();
   }
 
   private async loadHumanSurface(): Promise<void> {
@@ -466,31 +506,33 @@ export class Stage3D {
       const { loadHumanSurface } = await import('./HumanSurface');
       if (this.disposed) return;
       const surface = await loadHumanSurface();
-      if (this.disposed || !this.rig.attachSurface(surface)) surface.geometry.dispose();
+      if (this.disposed || !this.rig.attachSurface(surface)) {
+        surface.geometry.dispose();
+      } else {
+        this.lastPose = undefined;
+        this.invalidate();
+      }
     } catch {
       // The procedural rig remains usable if the visual asset fails to load.
     }
   }
 
-  private computeCurrentPose(spec: Stretch3DSpec, phase: PnfPhaseId, phaseProgress: number): PoseAngles {
+  private computeCurrentPose(spec: Stretch3DSpec, phase: PnfPhaseId, elapsed: number): PoseAngles {
     if (this.isMistake) {
-      const osc = 0.65 + 0.35 * Math.sin(this.totalElapsed * 2.2);
-      return interpolatePoses(spec.poses.setup, spec.poses.mistake, osc);
+      const time = this.mistakeElapsed % 5;
+      const amount = time < 1.2 ? time / 1.2 : time < 3.5 ? 1 : Math.max(0, 1 - (time - 3.5) / 1.2);
+      return sampleTransition(spec, 'setup', 'mistake', amount);
     }
 
-    const rampWindow = 0.28;
-    const t = Math.min(1, phaseProgress / rampWindow);
-
-    switch (phase) {
-      case 'setup':
-        return interpolatePoses(spec.poses.deepen, spec.poses.setup, Math.min(1, phaseProgress / 0.35));
-      case 'stretch':
-        return interpolatePoses(spec.poses.setup, spec.poses.stretch, t);
-      case 'resist':
-        return interpolatePoses(spec.poses.stretch, spec.poses.resist, t);
-      case 'deepen':
-        return interpolatePoses(spec.poses.resist, spec.poses.deepen, t);
+    const resist = spec.phases[2];
+    const returnsDuringRest = spec.technique.resistance === 'move' && !!resist.relaxSec;
+    if (phase === 'resist' && returnsDuringRest && elapsed >= resist.durationSec) {
+      return sampleTransition(spec, 'resist', 'stretch', Math.min(1, (elapsed - resist.durationSec) / TRANSITION_SECONDS));
     }
+    const t = Math.min(1, 1 + elapsed / TRANSITION_SECONDS);
+    if (t >= 1) return spec.poses[phase];
+    const previous = PHASE_ORDER[(this.phaseIndex + PHASE_ORDER.length - 1) % PHASE_ORDER.length];
+    return sampleTransition(spec, phase === 'deepen' && returnsDuringRest ? 'stretch' : previous, phase, t);
   }
 
   public setMobile(mobile: boolean): void {
@@ -526,6 +568,7 @@ export class Stage3D {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
+    this.invalidate();
 
     // Avoid resetting camera while soft keyboard is open or drawer has suspended playback without width change
     if (keyboardResize || (this.mobile && this.playbackSuspended && widthUnchanged && !forceRefit)) {
@@ -557,12 +600,16 @@ export class Stage3D {
     this.contextLost = false;
     this.options.onContextRestored?.();
     this.handleResize();
-    this.resumeFrames();
+    this.lastTime = performance.now();
+    this.invalidate();
   };
 
   private handleVisibilityChange = (): void => {
     if (document.hidden) this.stopFrames();
-    else this.resumeFrames();
+    else {
+      this.lastTime = performance.now();
+      this.invalidate();
+    }
   };
 
   private canRender(): boolean {
@@ -570,20 +617,26 @@ export class Stage3D {
   }
 
   private stopFrames(): void {
+    clearTimeout(this.holdTimer);
     cancelAnimationFrame(this.rafId);
     this.rafId = 0;
   }
 
+  private invalidate = (): void => {
+    this.stageDirty = true;
+    clearTimeout(this.holdTimer);
+    this.resumeFrames();
+  };
+
   private resumeFrames(): void {
     if (this.rafId || !this.canRender()) return;
-    this.lastTime = performance.now();
     this.rafId = requestAnimationFrame(this.animate);
   }
 
   private animate = (now: number): void => {
     this.rafId = 0;
     if (!this.canRender()) return;
-    const dt = THREE.MathUtils.clamp((now - this.lastTime) / 1000, 0, 0.08);
+    const dt = this.lastTime ? Math.max(0, (now - this.lastTime) / 1000) : 0;
     this.lastTime = now;
 
     try {
@@ -597,16 +650,40 @@ export class Stage3D {
     if (!this.hasRendered && this.currentSpec && this.viewportWidth > 0 && !this.renderer.getContext().isContextLost()) {
       this.hasRendered = true;
       this.options.onFirstFrame?.();
-      if (!this.surfaceRequested) {
-        this.surfaceRequested = true;
-        void this.loadHumanSurface();
-      }
     }
-    if (!this.rafId && this.canRender()) this.rafId = requestAnimationFrame(this.animate);
+
   };
 
+  private advanceClock(dt: number): void {
+    if (!this.isPlaying || this.playbackSuspended || !this.currentSpec) return;
+    this.totalElapsed += dt;
+    if (this.isMistake) {
+      this.mistakeElapsed += dt * this.speed;
+      return;
+    }
+    const spec = this.currentSpec;
+    this.phaseElapsed += dt * this.speed;
+    let duration = spec.phases[this.phaseIndex].durationSec + (spec.phases[this.phaseIndex].relaxSec ?? 0);
+    while (this.phaseElapsed >= duration) {
+      this.phaseElapsed -= duration;
+      this.phaseIndex = (this.phaseIndex + 1) % PHASE_ORDER.length;
+      const next = spec.phases[this.phaseIndex];
+      if (next.id !== 'resist' || spec.technique.resistance === 'move') this.phaseElapsed -= TRANSITION_SECONDS;
+      duration = next.durationSec + (next.relaxSec ?? 0);
+    }
+  }
+
+  private captureTime(): void {
+    const now = performance.now();
+    if (this.lastTime && this.canRender()) this.advanceClock(Math.max(0, now - this.lastTime) / 1000);
+    this.lastTime = now;
+  }
+
   private drawFrame(dt: number): void {
-    if (!this.playbackSuspended && (this.isPlaying || !this.mobile)) this.totalElapsed += dt;
+    const advancing = this.isPlaying && !this.playbackSuspended;
+    this.advanceClock(dt);
+    let redraw = this.stageDirty;
+    this.stageDirty = false;
 
     if (this.camTransition) {
       this.camTransition.t = Math.min(1, this.camTransition.t + dt * 3.0);
@@ -617,53 +694,61 @@ export class Stage3D {
         this.camTransition = null;
       }
     }
-    this.controls.update();
+    const cameraMoved = this.controls.update();
+    redraw ||= cameraMoved;
 
     if (this.currentSpec) {
-      const phaseInfo = this.currentSpec.phases[this.phaseIndex];
-      const simDuration = phaseInfo.durationSec > 15 ? 12 : phaseInfo.durationSec;
+      const spec = this.currentSpec;
+      const activeInfo = spec.phases[this.phaseIndex];
+      const relaxing = !!activeInfo.relaxSec && this.phaseElapsed >= activeInfo.durationSec;
+      const restChanged = this.relaxing !== relaxing;
+      this.relaxing = relaxing;
+      const elapsed = Math.max(0, this.phaseElapsed);
+      const progress = Math.min(1, elapsed / activeInfo.durationSec);
+      const releasing = relaxing && activeInfo.id === 'resist' && spec.technique.resistance === 'move';
+      const sample = this.isMistake ? this.mistakeElapsed : releasing
+        ? 1 + Math.min(TRANSITION_SECONDS, elapsed - activeInfo.durationSec) : Math.min(0, this.phaseElapsed);
+      const pose = this.lastPose && this.lastPhase === activeInfo.id && this.lastSample === sample
+        ? this.lastPose : this.computeCurrentPose(spec, activeInfo.id, this.phaseElapsed);
+      this.lastSample = sample;
+      const poseChanged = pose !== this.lastPose;
+      const phaseChanged = this.lastPhase !== activeInfo.id;
+      const pulse = advancing && (this.isMistake || (this.xray && activeInfo.id === 'resist' && !relaxing));
+      redraw ||= poseChanged || phaseChanged || restChanged || pulse;
+      if (poseChanged) {
+        this.rig.applyPose(pose);
+        this.contactShadows.update(this.rig);
+      }
+      if (redraw) this.props.updateDynamicProps(this.rig, this.camera, poseChanged);
+      if (poseChanged || phaseChanged || restChanged || (pulse && this.xray)) {
+        this.muscleReading = this.muscles.update(this.rig, relaxing ? 'stretch' : activeInfo.id, this.isMistake, this.totalElapsed, poseChanged, this.xray);
+      }
+      const { strainRatio, elongationPct } = this.muscleReading;
+      const angleDeg = redraw ? this.overlays.update(
+        this.rig, this.camera, this.viewportWidth, this.viewportHeight, activeInfo.id,
+        this.isMistake, this.totalElapsed, this.showLabels, this.xray, this.mobile, relaxing, poseChanged
+      ) : this.overlays.angleDeg;
+      this.lastPose = pose;
+      this.lastPhase = activeInfo.id;
 
-      if (this.isPlaying && !this.isMistake && !this.playbackSuspended) {
-        this.phaseElapsed += dt * this.speed;
-        if (this.phaseElapsed >= simDuration) {
-          this.phaseElapsed = 0;
-          this.phaseIndex = (this.phaseIndex + 1) % 4;
-        }
+      const inTransition = this.phaseElapsed < 0 || (releasing && elapsed - activeInfo.durationSec < TRANSITION_SECONDS);
+      if (this.camTransition || cameraMoved || (advancing && (inTransition || pulse))) {
+        this.resumeFrames();
+      } else if (advancing) {
+        // Static holds only need the next integer countdown tick.
+        const seconds = 1 - (elapsed % 1);
+        this.holdTimer = window.setTimeout(() => this.resumeFrames(), Math.max(1, seconds * 1000 / this.speed));
       }
 
-      const activeInfo = this.currentSpec.phases[this.phaseIndex];
-      const activeSimDur = activeInfo.durationSec > 15 ? 12 : activeInfo.durationSec;
-      const progress = THREE.MathUtils.clamp(this.phaseElapsed / activeSimDur, 0, 1);
-      const pose = this.computeCurrentPose(this.currentSpec, activeInfo.id, this.isPlaying ? progress : 1.0);
-
-      this.rig.applyPose(pose);
-      this.contactShadows.update(this.rig);
-      this.props.updateDynamicProps(this.rig, this.camera);
-      const { strainRatio, elongationPct } = this.muscles.update(
-        this.rig,
-        activeInfo.id,
-        this.isMistake,
-        this.totalElapsed
-      );
-      const angleDeg = this.overlays.update(
-        this.rig,
-        this.camera,
-        this.viewportWidth,
-        this.viewportHeight,
-        activeInfo.id,
-        this.isMistake,
-        this.totalElapsed,
-        this.showLabels
-      );
-
       if (this.onTelemetry) {
-        const scaledRemaining = Math.max(0, activeInfo.durationSec * (1 - progress));
+        const scaledRemaining = relaxing ? activeInfo.durationSec + activeInfo.relaxSec! - elapsed : activeInfo.durationSec - elapsed;
         this.onTelemetry({
           phase: activeInfo.id,
           phaseIndex: this.phaseIndex,
           phaseRemainingSec: scaledRemaining,
           phaseDurationSec: activeInfo.durationSec,
           phaseProgress: progress,
+          relaxing,
           angleDeg,
           strainRatio,
           elongationPct,
@@ -673,7 +758,7 @@ export class Stage3D {
       }
     }
 
-    this.renderer.render(this.scene, this.camera);
+    if (redraw) this.renderer.render(this.scene, this.camera);
   }
 
   public dispose(): void {
@@ -686,7 +771,9 @@ export class Stage3D {
     canvas.removeEventListener('dblclick', this.handleDoubleClick);
     canvas.removeEventListener('webglcontextlost', this.handleContextLost);
     canvas.removeEventListener('webglcontextrestored', this.handleContextRestored);
+    this.controls.removeEventListener('change', this.invalidate);
     this.controls.dispose();
+    this.props.dispose();
     this.rig.disposeSurface();
 
     const geometries = new Set<THREE.BufferGeometry>();
