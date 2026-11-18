@@ -23,9 +23,16 @@ function instrument() {
       return result;
     };
   }
+  // Count frames presented to the canvas, excluding intermediate anatomy render targets.
+  let framebuffer = null;
+  const bind = gl.bindFramebuffer;
+  gl.bindFramebuffer = function (target, value) {
+    if (target !== this.READ_FRAMEBUFFER) framebuffer = value;
+    return bind.call(this, target, value);
+  };
   const clear = gl.clear;
   gl.clear = function (mask) {
-    if (mask & this.COLOR_BUFFER_BIT) {
+    if (!framebuffer && (mask & this.COLOR_BUFFER_BIT)) {
       probe.frames++;
       probe.times.push(performance.now());
     }

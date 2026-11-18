@@ -36,8 +36,8 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'table', position: [0, 0, 0.59], scale: [1, 1.171, 1] }],
     fascicles: [
-      { id: 'flex-superficial', label: '指浅/深屈肌与桡侧腕屈肌', origin: 'humerus_med_epicondyleR', via: ['wrist_palmarR'], insertion: 'palm_fingersR', radius: 0.016, tendonRatio: 0.32 },
-      { id: 'flex-ulnaris', label: '尺侧腕屈肌与掌长肌', origin: 'humerus_med_epicondyleR', via: ['wrist_palmarR'], insertion: 'handR', radius: 0.014, tendonRatio: 0.28 },
+      { id: 'flex-superficial', window: 'forearmPalmR', label: '指浅/深屈肌与桡侧腕屈肌', origin: 'humerus_med_epicondyleR', via: ['wrist_palmarR'], insertion: 'palm_fingersR', radius: 0.016, tendonRatio: 0.32 },
+      { id: 'flex-ulnaris', window: 'forearmPalmR', label: '尺侧腕屈肌与掌长肌', origin: 'humerus_med_epicondyleR', via: ['wrist_palmarR'], insertion: 'handR', radius: 0.014, tendonRatio: 0.28 },
     ],
     poses: {
       setup: {
@@ -226,8 +226,8 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'table', position: [0, 0, 0.59], scale: [1, 1.171, 1] }],
     fascicles: [
-      { id: 'ext-digitorum', label: '指伸肌与小指伸肌（外上髁 → 手背指腱）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'dorsal_fingersR', radius: 0.016, tendonRatio: 0.34 },
-      { id: 'ext-ulnaris', label: '尺侧腕伸肌（外上髁 → 腕背尺侧）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'metacarpal_2_3R', radius: 0.014, tendonRatio: 0.28 },
+      { id: 'ext-digitorum', window: 'forearmBackR', label: '指伸肌与小指伸肌（外上髁 → 手背指腱）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'dorsal_fingersR', radius: 0.016, tendonRatio: 0.34 },
+      { id: 'ext-ulnaris', window: 'forearmBackR', label: '尺侧腕伸肌（外上髁 → 腕背尺侧）', origin: 'humerus_lat_epicondyleR', via: ['wrist_ulnarR'], insertion: 'metacarpal_5R', radius: 0.014, tendonRatio: 0.28 },
     ],
     poses: {
       setup: {
@@ -420,8 +420,8 @@ export const forearmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [],
     fascicles: [
-      { id: 'ecrl-belly', label: '桡侧腕长伸肌（外上髁上嵴 → 第2掌骨底）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'metacarpal_2_3R', radius: 0.015, tendonRatio: 0.34 },
-      { id: 'ecrb-belly', label: '桡侧腕短伸肌（外上髁 → 第3掌骨底）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'dorsal_fingersR', radius: 0.015, tendonRatio: 0.32 },
+      { id: 'ecrl-belly', window: 'forearmBackR', label: '桡侧腕长伸肌（外上髁上嵴 → 第2掌骨底）', origin: 'humerus_lat_epicondyleR', via: ['wrist_radialR'], insertion: 'metacarpal_2_3R', radius: 0.015, tendonRatio: 0.34 },
+      { id: 'ecrb-belly', window: 'forearmBackR', label: '桡侧腕短伸肌（外上髁 → 第3掌骨底）', origin: 'humerus_lat_epicondyleR', via: ['wrist_dorsalR'], insertion: 'metacarpal_3R', radius: 0.015, tendonRatio: 0.32 },
     ],
     poses: {
       setup: {

@@ -1,3 +1,5 @@
+import { AnatomicalWindow } from './AnatomicalWindow';
+import type { MuscleWindowPass } from './MuscleWindowPass';
 import { HandSurface } from './HandSurface';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -154,7 +156,7 @@ export class HumanRig {
   private readonly inverseRestMatrices = new Map<THREE.Bone, THREE.Matrix4>();
   private readonly skullCrown = new THREE.Vector3();
   private readonly fallbackCrown = new THREE.Vector3();
-  private surface?: { colorPass: THREE.SkinnedMesh; crown: THREE.Vector3 };
+  private surface?: { colorPass: THREE.SkinnedMesh; window: AnatomicalWindow; crown: THREE.Vector3 };
   private xray = false;
   private readonly supports = new WeakMap<Stretch3DSpec, Map<PoseId, Map<string, THREE.Matrix4>>>();
   private hands: (HandSurface | undefined)[] = [];
@@ -180,7 +182,7 @@ export class HumanRig {
     side: THREE.FrontSide,
   });
 
-  constructor() {
+  constructor(private readonly windowPass?: MuscleWindowPass) {
     this.buildHierarchy();
     this.root.updateMatrixWorld(true);
     for (const joint of Object.values(this.joints)) {
@@ -209,56 +211,29 @@ export class HumanRig {
     const crown = new THREE.Vector3().fromBufferAttribute(position, crownVertex)
       .applyMatrix4(this.inverseRestMatrices.get(this.joints.head)!);
 
-    const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.74 });
+    const window = new AnatomicalWindow(geometry, jointNames);
+    const material = new THREE.MeshStandardMaterial({ color: 0xd5bba5, roughness: 0.74 });
+    this.windowPass?.configureSkin(material);
     const colorPass = new THREE.SkinnedMesh(geometry, material);
     colorPass.bind(new THREE.Skeleton(bones, inverseMatrices), new THREE.Matrix4());
     colorPass.frustumCulled = false;
     colorPass.boundingSphere = new THREE.Sphere(this.joints.root.position.clone(), 1.5);
     colorPass.name = 'HumanSurface';
-    this.surface = { colorPass, crown };
+    this.surface = { colorPass, window, crown };
     this.root.add(colorPass);
     this.setTargetMuscles(this.targetMuscles);
     this.setXrayMode(this.xray);
     return true;
   }
 
-  /** Paint a regional surface cue in the bind pose so crossing limbs retain their own color. */
   public setTargetMuscles(muscles: FascicleSpec[]): void {
     this.targetMuscles = muscles;
-    if (!this.surface) return;
-    const geometry = this.surface.colorPass.geometry;
-    const positions = geometry.getAttribute('position');
-    let colors = geometry.getAttribute('color');
-    if (!colors) {
-      colors = new THREE.Float32BufferAttribute(new Float32Array(positions.count * 3), 3);
-      geometry.setAttribute('color', colors);
-    }
-    const segments: { line: THREE.Line3; radius: number }[] = [];
-    for (const muscle of muscles) {
-      if (muscle.role === 'nerve' || muscle.role === 'synergist') continue;
-      const points = [muscle.origin, ...(muscle.via ?? []), muscle.insertion].map(name => {
-        const socket = this.sockets[name] ?? this.joints[name];
-        const bone = socket instanceof THREE.Bone ? socket : socket.parent as THREE.Bone;
-        const local = socket === bone ? new THREE.Vector3() : socket.position.clone();
-        return local.applyMatrix4(this.inverseRestMatrices.get(bone)!.clone().invert());
-      });
-      for (let i = 1; i < points.length; i++) {
-        segments.push({ line: new THREE.Line3(points[i - 1], points[i]), radius: 0.045 + muscle.radius * 3 });
-      }
-    }
-    const skin = new THREE.Color(0xd5bba5), target = new THREE.Color(0xd86843);
-    const point = new THREE.Vector3(), nearest = new THREE.Vector3(), color = new THREE.Color();
-    for (let i = 0; i < positions.count; i++) {
-      point.fromBufferAttribute(positions, i);
-      let tint = 0;
-      for (const { line, radius } of segments) {
-        line.closestPointToPoint(point, true, nearest);
-        tint = Math.max(tint, 1 - THREE.MathUtils.smoothstep(point.distanceTo(nearest), radius * 0.45, radius));
-      }
-      color.copy(skin).lerp(target, tint);
-      colors.setXYZ(i, color.r, color.g, color.b);
-    }
-    colors.needsUpdate = true;
+    this.surface?.window.select(muscles, name => {
+      const socket = this.sockets[name] ?? this.joints[name];
+      const bone = socket instanceof THREE.Bone ? socket : socket.parent as THREE.Bone;
+      const local = socket === bone ? new THREE.Vector3() : socket.position.clone();
+      return local.applyMatrix4(this.inverseRestMatrices.get(bone)!.clone().invert());
+    });
   }
 
   public setXrayMode(xray: boolean): void {
@@ -496,6 +471,7 @@ export class HumanRig {
     this.addSocket('pelvis_center', pelvis, 0, 0.01, 0);
     for (const [sfx, sg] of [['R', -1], ['L', 1]] as const) {
       this.addSocket(`sacrum_ant${sfx}`, pelvis, sg * 0.022, -0.005, -0.055);
+      this.addSocket(`sacrum_ant_lower${sfx}`, pelvis, sg * 0.027, -0.027, -0.057);
       this.addSocket(`iliac_crest${sfx}`, pelvis, sg * 0.135, 0.055, -0.01);
       this.addSocket(`asis${sfx}`, pelvis, sg * 0.12, 0.03, 0.075);
       this.addSocket(`aiis${sfx}`, pelvis, sg * 0.095, -0.005, 0.078);
@@ -676,6 +652,8 @@ export class HumanRig {
       this.addSocket(`forearm_mid${sfx}`, elbow, 0, -forearmLen * 0.55, 0);
       this.addSocket(`wrist_palmar${sfx}`, elbow, 0, -forearmLen + 0.004, 0.026);
       this.addSocket(`wrist_dorsal${sfx}`, elbow, 0, -forearmLen + 0.004, -0.026);
+      this.addSocket(`wrist_ulnar${sfx}`, elbow, -sg * 0.024, -forearmLen + 0.009, -0.021);
+      this.addSocket(`wrist_radial${sfx}`, elbow, sg * 0.018, -forearmLen + 0.004, -0.024);
 
       // Wrist & Hand
       const wrist = this.makeJoint(`wrist${sfx}`, elbow, 0, -forearmLen, 0);
@@ -688,6 +666,8 @@ export class HumanRig {
       this.skinMeshes.push(palmSkin);
       this.addSocket(`hand${sfx}`, wrist, 0, -0.065, 0.005);
       this.addSocket(`metacarpal_2_3${sfx}`, wrist, -sg * 0.01, -0.056, -0.018);
+      this.addSocket(`metacarpal_5${sfx}`, wrist, -sg * 0.024, -0.057, -0.015);
+      this.addSocket(`metacarpal_3${sfx}`, wrist, -sg * 0.001, -0.060, -0.018);
       this.addSocket(`palm_fingers${sfx}`, wrist, 0, -0.098, 0.018);
       this.addSocket(`dorsal_fingers${sfx}`, wrist, 0, -0.095, -0.018);
     }
@@ -705,11 +685,14 @@ export class HumanRig {
 
       this.addSocket(`hip_joint${sfx}`, hip, 0, 0, 0);
       this.addSocket(`hip_post_wrap${sfx}`, pelvis, sg * 0.098, -0.062, -0.062);
+      this.addSocket(`piriformis_lower_wrap${sfx}`, pelvis, sg * 0.105, -0.043, -0.080);
       this.addSocket(`hip_lat_wrap${sfx}`, pelvis, sg * 0.158, -0.035, 0.012);
       this.addSocket(`greater_trochanter${sfx}`, hip, sg * 0.048, -0.032, -0.016);
+      this.addSocket(`trochanter_anterior${sfx}`, hip, sg * 0.045, -0.034, 0.009);
       this.addSocket(`lesser_trochanter${sfx}`, hip, -sg * 0.018, -0.052, -0.012);
       this.addSocket(`gluteal_tuberosity${sfx}`, hip, sg * 0.028, -0.105, -0.032);
       this.addSocket(`femur_linea_aspera${sfx}`, hip, -sg * 0.016, -0.19, -0.02);
+      this.addSocket(`femur_proximal_aspera${sfx}`, hip, -sg * 0.018, -0.102, -0.026);
       this.addSocket(`thigh_lat_itb${sfx}`, hip, sg * 0.052, -0.21, 0.0);
       this.addSocket(`thigh_ant_mid${sfx}`, hip, 0, -0.21, 0.038);
       this.addSocket(`thigh_mid_post${sfx}`, hip, 0, -thighLen * 0.52, -0.038);

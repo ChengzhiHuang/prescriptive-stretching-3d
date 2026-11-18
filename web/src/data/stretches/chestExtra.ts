@@ -36,10 +36,10 @@ export const chestExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'corner-wall', position: [0, 0, 0.56], rotationY: 180 }],
     fascicles: [
-      { id: 'pec2-r-mid', label: '右侧胸大肌（胸肋束）', origin: 'sternum_mid', via: ['shoulder_ant_capsuleR'], insertion: 'humerus_bicipital_ridgeR', radius: 0.02, tendonRatio: 0.2 },
-      { id: 'pec2-r-clav', label: '右侧胸大肌（锁骨束）', origin: 'clavicle_medR', via: ['shoulder_ant_capsuleR'], insertion: 'humerus_bicipital_ridgeR', radius: 0.016, tendonRatio: 0.18 },
-      { id: 'pec2-l-mid', label: '左侧胸大肌（胸肋束）', origin: 'sternum_mid', via: ['shoulder_ant_capsuleL'], insertion: 'humerus_bicipital_ridgeL', radius: 0.02, tendonRatio: 0.2 },
-      { id: 'pec2-l-clav', label: '左侧胸大肌（锁骨束）', origin: 'clavicle_medL', via: ['shoulder_ant_capsuleL'], insertion: 'humerus_bicipital_ridgeL', radius: 0.016, tendonRatio: 0.18 },
+      { id: 'pec2-r-mid', window: 'chestR', label: '右侧胸大肌（胸肋束）', origin: 'sternum_mid', via: ['shoulder_ant_capsuleR'], insertion: 'humerus_bicipital_ridgeR', radius: 0.02, tendonRatio: 0.2 },
+      { id: 'pec2-r-clav', window: 'chestR', label: '右侧胸大肌（锁骨束）', origin: 'clavicle_medR', via: ['shoulder_ant_capsuleR'], insertion: 'humerus_bicipital_ridgeR', radius: 0.016, tendonRatio: 0.18 },
+      { id: 'pec2-l-mid', window: 'chestL', label: '左侧胸大肌（胸肋束）', origin: 'sternum_mid', via: ['shoulder_ant_capsuleL'], insertion: 'humerus_bicipital_ridgeL', radius: 0.02, tendonRatio: 0.2 },
+      { id: 'pec2-l-clav', window: 'chestL', label: '左侧胸大肌（锁骨束）', origin: 'clavicle_medL', via: ['shoulder_ant_capsuleL'], insertion: 'humerus_bicipital_ridgeL', radius: 0.016, tendonRatio: 0.18 },
     ],
     poses: {
       setup: {
@@ -232,8 +232,8 @@ export const chestExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'doorframe', position: [0.086, 0, 0.145], scale: [1, 1.075, 1] }],
     fascicles: [
-      { id: 'pec-min-3', label: '胸小肌（第3肋 → 喙突）', origin: 'ribs_3_5R', insertion: 'coracoidR', radius: 0.015, tendonRatio: 0.2 },
-      { id: 'pec-min-5', label: '胸小肌（第5肋 → 喙突）', origin: 'sternum_lower', insertion: 'coracoidR', radius: 0.014, tendonRatio: 0.22, role: 'synergist' },
+      { id: 'pec-min-3', window: 'chestR', label: '胸小肌（第3肋 → 喙突）', origin: 'ribs_3_5R', insertion: 'coracoidR', radius: 0.015, tendonRatio: 0.2 },
+      { id: 'pec-min-5', window: 'chestR', label: '胸小肌（第5肋 → 喙突）', origin: 'sternum_lower', insertion: 'coracoidR', radius: 0.014, tendonRatio: 0.22 },
     ],
     poses: {
       setup: {
@@ -425,8 +425,8 @@ export const chestExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'bench', position: [0, 0, -0.275], rotationY: 90, scale: [1, 0.8, 1] }],
     fascicles: [
-      { id: 'pec-min-seat-r', label: '右侧胸小肌', origin: 'ribs_3_5R', insertion: 'coracoidR', radius: 0.016, tendonRatio: 0.2 },
-      { id: 'pec-min-seat-l', label: '左侧胸小肌', origin: 'ribs_3_5L', insertion: 'coracoidL', radius: 0.016, tendonRatio: 0.2 },
+      { id: 'pec-min-seat-r', window: 'chestR', label: '右侧胸小肌', origin: 'ribs_3_5R', insertion: 'coracoidR', radius: 0.016, tendonRatio: 0.2 },
+      { id: 'pec-min-seat-l', window: 'chestL', label: '左侧胸小肌', origin: 'ribs_3_5L', insertion: 'coracoidL', radius: 0.016, tendonRatio: 0.2 },
     ],
     poses: {
       // The athletic surface has its thumb-side along wrist-local Z, so the

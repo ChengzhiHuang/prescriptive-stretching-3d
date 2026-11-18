@@ -37,8 +37,8 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'doorframe', position: [0.16, 0, -0.14] }],
     fascicles: [
-      { id: 'infra2-sup', label: '冈下肌（上部束）', origin: 'infraspinous_fossa_supR', via: ['shoulder_post_capsuleR'], insertion: 'humerus_greater_tubercleR', radius: 0.017, tendonRatio: 0.22 },
-      { id: 'infra2-inf', label: '冈下肌（下部束）', origin: 'infraspinous_fossa_infR', via: ['shoulder_post_capsuleR'], insertion: 'humerus_greater_tubercleR', radius: 0.019, tendonRatio: 0.22 },
+      { id: 'infra2-sup', window: 'scapulaR', label: '冈下肌（上部束）', origin: 'infraspinous_fossa_supR', via: ['shoulder_post_capsuleR'], insertion: 'humerus_greater_tubercleR', radius: 0.017, tendonRatio: 0.22 },
+      { id: 'infra2-inf', window: 'scapulaR', label: '冈下肌（下部束）', origin: 'infraspinous_fossa_infR', via: ['shoulder_post_capsuleR'], insertion: 'humerus_greater_tubercleR', radius: 0.019, tendonRatio: 0.22 },
     ],
     poses: {
       setup: {
@@ -218,7 +218,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'wall', position: [-0.67, 0, -0.14], rotationY: 8 }],
     fascicles: [
-      { id: 'teres-major-r', label: '大圆肌（肩胛下角 → 腋后壁 → 肱骨小结节嵴）', origin: 'scapula_inf_angleR', via: ['shoulder_inf_capsuleR'], insertion: 'humerus_med_crestR', radius: 0.019, tendonRatio: 0.18 },
+      { id: 'teres-major-r', window: 'scapulaR', label: '大圆肌（肩胛下角 → 腋后壁 → 肱骨小结节嵴）', origin: 'scapula_inf_angleR', via: ['shoulder_inf_capsuleR'], insertion: 'humerus_med_crestR', radius: 0.019, tendonRatio: 0.18 },
     ],
     poses: {
       setup: {
@@ -412,7 +412,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
     },
     props: [],
     fascicles: [
-      { id: 'supra1-belly', label: '冈上肌（冈上窝 → 肩峰下 → 大结节）', origin: 'supraspinous_fossaR', via: ['acromionR'], insertion: 'humerus_greater_tubercleR', radius: 0.015, tendonRatio: 0.25 },
+      { id: 'supra1-belly', window: 'shoulderTopR', label: '冈上肌（冈上窝 → 肩峰下 → 大结节）', origin: 'supraspinous_fossaR', via: ['acromionR'], insertion: 'humerus_greater_tubercleR', radius: 0.015, tendonRatio: 0.25 },
     ],
     poses: {
       setup: {
@@ -556,8 +556,8 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
       radius: 0.15,
     },
     cameras: [
+      { id: 'scapulaTop', label: '右后上方冈上肌与交叉手臂', position: [-0.83, 3.375, -1.349], target: [-0.08, 1.2, -0.05] },
       { id: 'front', label: '正面双臂交叉标准位', position: [0.06, 1.32, 1.52], target: [0, 1.12, 0.12] },
-      { id: 'scapulaTop', label: '右后冈上窝肌束特写', position: [-0.85, 1.52, -1.08], target: [-0.08, 1.2, -0.05] },
       { id: 'sideRight', label: '右侧微伸肘轨迹观察', position: [-1.38, 1.22, 0.42], target: [0, 1.12, 0.1] },
     ],
   },
@@ -597,7 +597,7 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'bar', position: [0, 0, 0], attachSockets: ['handR', 'handL'] }],
     fascicles: [
-      { id: 'supra2-belly', label: '冈上肌（冈上窝 → 大结节）', origin: 'supraspinous_fossaR', via: ['acromionR'], insertion: 'humerus_greater_tubercleR', radius: 0.015, tendonRatio: 0.25 },
+      { id: 'supra2-belly', window: 'shoulderTopR', label: '冈上肌（冈上窝 → 大结节）', origin: 'supraspinous_fossaR', via: ['acromionR'], insertion: 'humerus_greater_tubercleR', radius: 0.015, tendonRatio: 0.25 },
     ],
     poses: {
       setup: {
@@ -746,8 +746,8 @@ export const rotatorCuffExtraSpecs: Stretch3DSpec[] = [
       radius: 0.15,
     },
     cameras: [
+      { id: 'scapulaBack', label: '右后上方冈上肌与持棍位', position: [-0.83, 3.355, -1.349], target: [-0.08, 1.18, -0.05] },
       { id: 'front', label: '正面拉棍杠杆标准位', position: [0.08, 1.28, 1.58], target: [0, 1.06, 0.1] },
-      { id: 'scapulaBack', label: '右后冈上肌深层特写', position: [-0.88, 1.48, -1.12], target: [-0.08, 1.18, -0.05] },
       { id: 'frontRight', label: '右前肘位核对视角', position: [-0.95, 1.25, 1.28], target: [0, 1.08, 0.08] },
     ],
   },

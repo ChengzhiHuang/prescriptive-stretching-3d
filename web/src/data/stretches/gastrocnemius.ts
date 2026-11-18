@@ -37,6 +37,7 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
   fascicles: [
     {
       id: 'gastroc-medial',
+      window: 'calfBackR',
       label: '腓肠肌（内侧头 → 跟腱）',
       origin: 'femur_condyle_medR',
       via: ['knee_post_wrapR', 'calf_belly_lowerR', 'achilles_midR'],
@@ -46,6 +47,7 @@ export const gastrocnemiusSpec: Stretch3DSpec = {
     },
     {
       id: 'gastroc-lateral',
+      window: 'calfBackR',
       label: '腓肠肌（外侧头 → 跟腱）',
       origin: 'femur_condyle_latR',
       via: ['knee_post_wrapR', 'calf_belly_lowerR', 'achilles_midR'],

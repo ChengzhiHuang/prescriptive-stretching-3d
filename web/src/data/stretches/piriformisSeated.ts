@@ -38,6 +38,7 @@ export const piriformisSeatedSpec: Stretch3DSpec = {
   fascicles: [
     {
       id: 'piriformis-sup',
+      window: 'buttockR',
       label: '梨状肌（上束）',
       origin: 'sacrum_antR',
       via: ['hip_post_wrapR'],
@@ -47,15 +48,17 @@ export const piriformisSeatedSpec: Stretch3DSpec = {
     },
     {
       id: 'piriformis-inf',
+      window: 'buttockR',
       label: '梨状肌（下束）',
-      origin: 'ischial_tuberosityR',
+      origin: 'sacrum_ant_lowerR',
+      via: ['piriformis_lower_wrapR'],
       insertion: 'greater_trochanterR',
       radius: 0.015,
       tendonRatio: 0.24,
-       role: 'synergist',
     },
     {
       id: 'sciatic-nerve',
+      window: 'buttockR',
       label: '坐骨神经干（毗邻穿行）',
       origin: 'sacrum_antR',
       via: ['ischial_tuberosityR'],
@@ -234,8 +237,8 @@ export const piriformisSeatedSpec: Stretch3DSpec = {
     radius: 0.19,
   },
   cameras: [
+    { id: 'hipBack', label: '右后梨状肌与交叉腿', position: [-1.379, 0.895, -0.77], target: [-0.08, 0.52, -0.02] },
     { id: 'frontRight', label: '右前斜视标准位', position: [-1.18, 1.08, 1.38], target: [-0.04, 0.62, 0.08] },
-    { id: 'hipBack', label: '臀深梨状肌与坐骨神经特写', position: [-0.95, 0.88, -0.98], target: [-0.08, 0.52, -0.02] },
     { id: 'side', label: '右侧腰椎曲度对比视角', position: [-1.62, 0.85, 0.08], target: [0, 0.65, 0.05] },
   ],
 };

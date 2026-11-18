@@ -38,8 +38,8 @@ export const upperBackExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'chair', position: [-0.169, 0, 0.36], rotationY: 180 }],
     fascicles: [
-      { id: 'mid-trap-r', label: '斜方肌中部（胸椎棘突 → 肩峰/肩胛冈）', origin: 't1_spinous', insertion: 'acromionR', radius: 0.017, tendonRatio: 0.18 },
-      { id: 'rhomboid-major-r', label: '大小菱形肌（棘突 → 肩胛骨内缘）', origin: 't4_spinous', insertion: 'scapula_medial_borderR', radius: 0.019, tendonRatio: 0.16 },
+      { id: 'mid-trap-r', window: 'scapulaR', label: '斜方肌中部（胸椎棘突 → 肩峰/肩胛冈）', origin: 't1_spinous', insertion: 'acromionR', radius: 0.017, tendonRatio: 0.18 },
+      { id: 'rhomboid-major-r', window: 'scapulaR', label: '大小菱形肌（棘突 → 肩胛骨内缘）', origin: 't4_spinous', insertion: 'scapula_medial_borderR', radius: 0.019, tendonRatio: 0.16 },
     ],
     poses: {
       setup: {
@@ -202,9 +202,9 @@ export const upperBackExtraSpecs: Stretch3DSpec[] = [
       radius: 0.16,
     },
     cameras: [
+      { id: 'topBack', label: '俯看肩胛间肌束与抓椅位', position: [-0.75, 3.125, 1.349], target: [0, 0.95, 0.05] },
       { id: 'backRight', label: '右后肩胛膏肓区特写', position: [-1.18, 1.38, -1.15], target: [-0.04, 0.92, 0.02] },
       { id: 'frontLeft', label: '左前交叉抓椅标准位', position: [1.28, 1.18, 1.25], target: [0, 0.78, 0.12] },
-      { id: 'topBack', label: '后上背部水平度核对', position: [0, 1.85, -1.05], target: [0, 0.95, 0.05] },
     ],
   },
 
@@ -244,8 +244,8 @@ export const upperBackExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'bench', position: [0, 0, 0.12], scale: [0.85, 0.8, 1] }],
     fascicles: [
-      { id: 'mtr-seat-trap', label: '斜方肌中部', origin: 't1_spinous', insertion: 'acromionR', radius: 0.017, tendonRatio: 0.18 },
-      { id: 'mtr-seat-rhom', label: '大小菱形肌', origin: 't4_spinous', insertion: 'scapula_medial_borderR', radius: 0.019, tendonRatio: 0.16 },
+      { id: 'mtr-seat-trap', window: 'scapulaR', label: '斜方肌中部', origin: 't1_spinous', insertion: 'acromionR', radius: 0.017, tendonRatio: 0.18 },
+      { id: 'mtr-seat-rhom', window: 'scapulaR', label: '大小菱形肌', origin: 't4_spinous', insertion: 'scapula_medial_borderR', radius: 0.019, tendonRatio: 0.16 },
     ],
     poses: {
       setup: {
@@ -441,8 +441,8 @@ export const upperBackExtraSpecs: Stretch3DSpec[] = [
       { type: 'wall', position: [0.12, 0, 0.78] },
     ],
     fascicles: [
-      { id: 'lat-iliac-r', label: '背阔肌（髂嵴—腋下外侧束）', origin: 'iliac_crestR', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.02, tendonRatio: 0.22 },
-      { id: 'lat-thoracic-r', label: '背阔肌（胸腰椎—肱骨束）', origin: 't12_spinous', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.022, tendonRatio: 0.2 },
+      { id: 'lat-iliac-r', window: 'backR', label: '背阔肌（髂嵴—腋下外侧束）', origin: 'iliac_crestR', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.02, tendonRatio: 0.22 },
+      { id: 'lat-thoracic-r', window: 'backR', label: '背阔肌（胸腰椎—肱骨束）', origin: 't12_spinous', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.022, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {
@@ -653,8 +653,8 @@ export const upperBackExtraSpecs: Stretch3DSpec[] = [
       { type: 'table', position: [-0.54, 0, 0.18], scale: [1, 0.935, 1] },
     ],
     fascicles: [
-      { id: 'lat-seat-iliac', label: '背阔肌（髂嵴外侧束）', origin: 'iliac_crestR', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.02, tendonRatio: 0.22 },
-      { id: 'lat-seat-thor', label: '背阔肌（胸腰束）', origin: 't12_spinous', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.021, tendonRatio: 0.2 },
+      { id: 'lat-seat-iliac', window: 'backR', label: '背阔肌（髂嵴外侧束）', origin: 'iliac_crestR', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.02, tendonRatio: 0.22 },
+      { id: 'lat-seat-thor', window: 'backR', label: '背阔肌（胸腰束）', origin: 't12_spinous', via: ['scapula_inf_angleR'], insertion: 'humerus_med_crestR', radius: 0.021, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {
@@ -798,8 +798,8 @@ export const upperBackExtraSpecs: Stretch3DSpec[] = [
       radius: 0.19,
     },
     cameras: [
+      { id: 'backRight', label: '右后背阔肌与桌下支撑', position: [-0.8, 2.155, -1.319], target: [-0.05, 0.88, -0.02] },
       { id: 'front', label: '正面桌下卡膝与侧屈标准位', position: [0.12, 1.18, 1.78], target: [-0.08, 0.85, 0] },
-      { id: 'backRight', label: '右后背阔肌全长特写', position: [-1.18, 1.25, -1.28], target: [-0.05, 0.88, -0.02] },
       { id: 'side', label: '左侧冠状面不前倾核对', position: [1.55, 1.08, 0.15], target: [0, 0.85, 0] },
     ],
   },

@@ -36,8 +36,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'chair', position: [-0.08, 0, 0.42], rotationY: 180, scale: [1, 0.9, 1] }],
     fascicles: [
-      { id: 'glut-max-sup', label: '臀大肌（髂后上部束）', origin: 'iliac_crestR', via: ['hip_post_wrapR'], insertion: 'gluteal_tuberosityR', radius: 0.024, tendonRatio: 0.2 },
-      { id: 'glut-max-inf', label: '臀大肌（骶尾下部束）', origin: 'sacrum_postR', via: ['hip_post_wrapR'], insertion: 'gluteal_tuberosityR', radius: 0.025, tendonRatio: 0.2 },
+      { id: 'glut-max-sup', window: 'buttockR', label: '臀大肌（髂后上部束）', origin: 'iliac_crestR', via: ['hip_post_wrapR'], insertion: 'gluteal_tuberosityR', radius: 0.024, tendonRatio: 0.2 },
+      { id: 'glut-max-inf', window: 'buttockR', label: '臀大肌（骶尾下部束）', origin: 'sacrum_postR', via: ['hip_post_wrapR'], insertion: 'gluteal_tuberosityR', radius: 0.025, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {
@@ -222,8 +222,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'table', position: [0, 0, 0.678], scale: [1, 1.06, 1] }],
     fascicles: [
-      { id: 'glut-med-r', label: '臀中肌（髂骨翼后外侧 → 大转子）', origin: 'iliac_crestR', via: ['hip_post_wrapR'], insertion: 'gluteal_tuberosityR', radius: 0.021, tendonRatio: 0.2 },
-      { id: 'glut-min-r', label: '臀小肌（深层束）', origin: 'iliac_crestR', via: ['hip_lat_wrapR'], insertion: 'greater_trochanterR', radius: 0.015, tendonRatio: 0.22, role: 'synergist' },
+      { id: 'glut-med-r', window: 'buttockR', label: '臀中肌（髂骨翼后外侧 → 大转子）', origin: 'iliac_crestR', via: ['hip_post_wrapR'], insertion: 'greater_trochanterR', radius: 0.021, tendonRatio: 0.2 },
+      { id: 'glut-min-r', window: 'buttockR', label: '臀小肌（深层束）', origin: 'iliac_crestR', via: ['hip_lat_wrapR'], insertion: 'trochanter_anteriorR', radius: 0.015, tendonRatio: 0.22 },
     ],
     poses: {
       setup: {
@@ -367,8 +367,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
       radius: 0.19,
     },
     cameras: [
+      { id: 'hipSide', label: '右侧臀中肌与臀小肌', position: [-1.58, 1.255, 0.05], target: [-0.08, 0.88, 0.05] },
       { id: 'frontRight', label: '右前桌面三角腿位标准视角', position: [-1.32, 1.32, 1.38], target: [-0.04, 0.88, 0.18] },
-      { id: 'hipSide', label: '右侧臀中肌外侧束特写', position: [-1.45, 1.08, -0.45], target: [-0.08, 0.88, 0.05] },
       { id: 'top', label: '俯视膝对肚脐三角形核对', position: [0, 2.25, 0.35], target: [0, 0.88, 0.18] },
     ],
   },
@@ -408,8 +408,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'table', position: [0, 0, 0.678], scale: [1, 1.05, 1] }],
     fascicles: [
-      { id: 'piri-st-main', label: '梨状肌（骶骨前面 → 大转子）', origin: 'sacrum_antR', via: ['hip_post_wrapR'], insertion: 'greater_trochanterR', radius: 0.017, tendonRatio: 0.22 },
-      { id: 'piri-st-sciatic', label: '坐骨神经干', origin: 'sacrum_antR', via: ['ischial_tuberosityR'], insertion: 'thigh_mid_postR', radius: 0.006, role: 'nerve' },
+      { id: 'piri-st-main', window: 'buttockR', label: '梨状肌（骶骨前面 → 大转子）', origin: 'sacrum_antR', via: ['hip_post_wrapR'], insertion: 'greater_trochanterR', radius: 0.017, tendonRatio: 0.22 },
+      { id: 'piri-st-sciatic', window: 'buttockR', label: '坐骨神经干', origin: 'sacrum_antR', via: ['ischial_tuberosityR'], insertion: 'thigh_mid_postR', radius: 0.006, role: 'nerve' },
     ],
     poses: {
       setup: {
@@ -553,8 +553,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
       radius: 0.19,
     },
     cameras: [
+      { id: 'backRight', label: '右侧梨状肌与桌面支撑', position: [-1.56, 1.235, 0.02], target: [-0.06, 0.86, 0.02] },
       { id: 'topFront', label: '俯斜视“缺一边正方形”腿位', position: [-1.15, 1.65, 1.25], target: [-0.04, 0.88, 0.18] },
-      { id: 'backRight', label: '右后梨状肌与坐骨神经特写', position: [-1.18, 1.05, -0.95], target: [-0.06, 0.86, 0.02] },
       { id: 'sideRight', label: '右侧腰曲与竖直左腿核对', position: [-1.65, 1.02, 0.15], target: [0, 0.88, 0.12] },
     ],
   },
@@ -594,8 +594,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
     },
     props: [],
     fascicles: [
-      { id: 'ql-iliocostal', label: '腰方肌（髂嵴 → 第12肋束）', origin: 'iliac_crestR', insertion: 'rib12R', radius: 0.019, tendonRatio: 0.18 },
-      { id: 'ql-iliolumbar', label: '腰方肌（髂嵴 → 腰椎横突束）', origin: 'iliac_crestR', insertion: 'lumbar_transverseR', radius: 0.016, tendonRatio: 0.18 },
+      { id: 'ql-iliocostal', window: 'waistR', label: '腰方肌（髂嵴 → 第12肋束）', origin: 'iliac_crestR', insertion: 'rib12R', radius: 0.019, tendonRatio: 0.18 },
+      { id: 'ql-iliolumbar', window: 'waistR', label: '腰方肌（髂嵴 → 腰椎横突束）', origin: 'iliac_crestR', insertion: 'lumbar_transverseR', radius: 0.016, tendonRatio: 0.18 },
     ],
     poses: {
       setup: {
@@ -747,8 +747,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
       radius: 0.2,
     },
     cameras: [
+      { id: 'back', label: '右后腰方肌与卧姿支撑', position: [-0.7, 0.755, -1.319], target: [0.05, 0.38, -0.02] },
       { id: 'front', label: '正面侧卧“沙滩姿势”全景', position: [0.25, 0.78, 1.85], target: [0.05, 0.35, 0] },
-      { id: 'back', label: '背面深层腰方肌特写', position: [0.22, 0.85, -1.65], target: [0.05, 0.38, -0.02] },
       { id: 'top', label: '俯视身体与右腿同一直线核对', position: [0.1, 2.15, 0.15], target: [0.05, 0.25, 0] },
     ],
   },
@@ -788,11 +788,11 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
     },
     props: [
       { type: 'chair', position: [0, 0, -0.04], scale: [1, 0.8, 1] },
-      { type: 'table', position: [-0.55, 0, 0.20], scale: [1, 0.935, 1] },
+      { type: 'table', showUnderside: true, position: [-0.55, 0, 0.20], scale: [1, 0.935, 1] },
     ],
     fascicles: [
-      { id: 'ql-seat-12', label: '腰方肌（髂嵴 → 第12肋）', origin: 'iliac_crestR', insertion: 'rib12R', radius: 0.019, tendonRatio: 0.18 },
-      { id: 'ql-seat-lum', label: '腰方肌（髂嵴 → 腰椎横突）', origin: 'iliac_crestR', insertion: 'lumbar_transverseR', radius: 0.016, tendonRatio: 0.18 },
+      { id: 'ql-seat-12', window: 'waistR', label: '腰方肌（髂嵴 → 第12肋）', origin: 'iliac_crestR', insertion: 'rib12R', radius: 0.019, tendonRatio: 0.18 },
+      { id: 'ql-seat-lum', window: 'waistR', label: '腰方肌（髂嵴 → 腰椎横突）', origin: 'iliac_crestR', insertion: 'lumbar_transverseR', radius: 0.016, tendonRatio: 0.18 },
     ],
     poses: {
       setup: {
@@ -937,7 +937,7 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
       radius: 0.19,
     },
     cameras: [
-      { id: 'backRight', label: '右后腰方肌特写视角', position: [-1.08, 1.12, -1.18], target: [-0.05, 0.72, -0.02] },
+      { id: 'backRight', label: '右后上方腰方肌与桌下卡膝', position: [-0.8, 1.995, -1.319], target: [-0.05, 0.72, -0.02] },
       { id: 'front', label: '正面桌下卡膝与抱肩位', position: [0.15, 1.12, 1.65], target: [-0.06, 0.78, 0] },
       { id: 'sideLeft', label: '左侧防前倾核对视角', position: [1.48, 1.02, 0.15], target: [0, 0.75, 0] },
     ],
@@ -978,8 +978,8 @@ export const hipLumbarExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'table', position: [0, 0, -0.44] }],
     fascicles: [
-      { id: 'psoas-major-r', label: '腰大肌（腰椎前外侧 → 股骨小转子）', origin: 't12_l4_antR', via: ['pubisR'], insertion: 'lesser_trochanterR', radius: 0.019, tendonRatio: 0.2 },
-      { id: 'iliacus-r', label: '髂肌（髂窝内面 → 股骨小转子）', origin: 'iliac_fossaR', via: ['pubisR'], insertion: 'lesser_trochanterR', radius: 0.018, tendonRatio: 0.2 },
+      { id: 'psoas-major-r', window: 'hipFrontR', label: '腰大肌（腰椎前外侧 → 股骨小转子）', origin: 't12_l4_antR', via: ['pubisR'], insertion: 'lesser_trochanterR', radius: 0.019, tendonRatio: 0.2 },
+      { id: 'iliacus-r', window: 'hipFrontR', label: '髂肌（髂窝内面 → 股骨小转子）', origin: 'iliac_fossaR', via: ['pubisR'], insertion: 'lesser_trochanterR', radius: 0.018, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {

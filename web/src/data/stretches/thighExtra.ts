@@ -42,7 +42,7 @@ export const thighExtraSpecs: Stretch3DSpec[] = [
       { type: 'bar', position: [0, 0, 0], attachSockets: ['forefootR', 'strap_shoulderR', 'handR', 'handL'] },
     ],
     fascicles: [
-      { id: 'rec-fem-main', label: '股直肌（髂前下棘 → 髌骨 → 胫骨粗隆）', origin: 'aiisR', via: ['thigh_ant_midR', 'patella_antR'], insertion: 'tibial_tuberosityR', radius: 0.022, tendonRatio: 0.24 },
+      { id: 'rec-fem-main', window: 'thighFrontR', label: '股直肌（髂前下棘 → 髌骨 → 胫骨粗隆）', origin: 'aiisR', via: ['thigh_ant_midR', 'patella_antR'], insertion: 'tibial_tuberosityR', radius: 0.022, tendonRatio: 0.24 },
     ],
     poses: {
       setup: {
@@ -247,7 +247,7 @@ export const thighExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'wall', position: [0, 0, -0.707] }],
     fascicles: [
-      { id: 'rf-kneel-main', label: '股直肌（跨髋膝双关节肌束）', origin: 'aiisR', via: ['thigh_ant_midR', 'patella_antR'], insertion: 'tibial_tuberosityR', radius: 0.022, tendonRatio: 0.24 },
+      { id: 'rf-kneel-main', window: 'thighFrontR', label: '股直肌（跨髋膝双关节肌束）', origin: 'aiisR', via: ['thigh_ant_midR', 'patella_antR'], insertion: 'tibial_tuberosityR', radius: 0.022, tendonRatio: 0.24 },
     ],
     // Root placement grounds the right knee. The left leg compensates to plant the sole.
     poses: {
@@ -437,7 +437,7 @@ export const thighExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'wall', position: [0, 0, -0.697] }],
     fascicles: [
-      { id: 'tfl-belly-itb', label: '阔筋膜张肌 → 髂胫束（ITB）', origin: 'asisR', via: ['hip_lat_wrapR', 'thigh_lat_itbR'], insertion: 'gerdy_tubercleR', radius: 0.019, tendonRatio: 0.42 },
+      { id: 'tfl-belly-itb', window: 'thighSideR', label: '阔筋膜张肌 → 髂胫束（ITB）', origin: 'asisR', via: ['hip_lat_wrapR', 'thigh_lat_itbR'], insertion: 'gerdy_tubercleR', radius: 0.019, tendonRatio: 0.42 },
     ],
     poses: {
       setup: {
@@ -616,8 +616,9 @@ export const thighExtraSpecs: Stretch3DSpec[] = [
     },
     props: [],
     fascicles: [
-      { id: 'add-pectineus', label: '耻骨肌与短收肌（上部束）', origin: 'pubisR', insertion: 'lesser_trochanterR', radius: 0.017, tendonRatio: 0.18 },
-      { id: 'add-longus', label: '长收肌（耻骨前面 → 股骨粗线中段）', origin: 'pubisR', insertion: 'femur_linea_asperaR', radius: 0.02, tendonRatio: 0.2 },
+      { id: 'add-pectineus', window: 'innerThighR', label: '耻骨肌（上部束）', origin: 'pubisR', insertion: 'lesser_trochanterR', radius: 0.017, tendonRatio: 0.18 },
+      { id: 'add-brevis', window: 'innerThighR', label: '短收肌（股骨粗线上段）', origin: 'pubisR', insertion: 'femur_proximal_asperaR', radius: 0.015, tendonRatio: 0.2 },
+      { id: 'add-longus', window: 'innerThighR', label: '长收肌（耻骨前面 → 股骨粗线中段）', origin: 'pubisR', insertion: 'femur_linea_asperaR', radius: 0.02, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {
@@ -798,7 +799,7 @@ export const thighExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'doorframe', position: [0.57, 0, 0.18] }],
     fascicles: [
-      { id: 'gracilis-main', label: '股薄肌（耻骨下支 → 跨膝内侧 → 胫骨鹅足）', origin: 'pubisR', via: ['femur_condyle_medR'], insertion: 'pes_anserinusR', radius: 0.016, tendonRatio: 0.28 },
+      { id: 'gracilis-main', window: 'innerThighR', label: '股薄肌（耻骨下支 → 跨膝内侧 → 胫骨鹅足）', origin: 'pubisR', via: ['femur_condyle_medR'], insertion: 'pes_anserinusR', radius: 0.016, tendonRatio: 0.28 },
     ],
     poses: {
       setup: {

@@ -36,6 +36,7 @@ export const infraspinatus1Spec: Stretch3DSpec = {
   fascicles: [
     {
       id: 'infra-superior',
+      window: 'scapulaR',
       label: '冈下肌（上部横行束）',
       origin: 'infraspinous_fossa_supR',
       via: ['shoulder_post_capsuleR'],
@@ -45,6 +46,7 @@ export const infraspinatus1Spec: Stretch3DSpec = {
     },
     {
       id: 'infra-inferior',
+      window: 'scapulaR',
       label: '冈下肌（下部斜行束）',
       origin: 'infraspinous_fossa_infR',
       via: ['shoulder_post_capsuleR'],

@@ -38,6 +38,7 @@ export const upperTrapeziusSpec: Stretch3DSpec = {
   fascicles: [
     {
       id: 'ut-occiput-clav',
+      window: 'napeR',
       label: '斜方肌上部（枕骨—锁骨束）',
       origin: 'occiputR',
       via: ['c_transverseR'],
@@ -47,6 +48,7 @@ export const upperTrapeziusSpec: Stretch3DSpec = {
     },
     {
       id: 'ut-c4-acromion',
+      window: 'napeR',
       label: '斜方肌上部（颈椎—肩峰束）',
       origin: 'c4_spinous',
       insertion: 'acromionR',
@@ -55,6 +57,7 @@ export const upperTrapeziusSpec: Stretch3DSpec = {
     },
     {
       id: 'ut-c7-acromion',
+      window: 'napeR',
       label: '斜方肌上中部过渡束',
       origin: 'c7_spinous',
       insertion: 'acromionR',

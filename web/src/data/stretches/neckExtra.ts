@@ -37,6 +37,7 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
     fascicles: [
       {
         id: 'scm-sternal',
+        window: 'frontNeckR',
         label: '胸锁乳突肌（胸骨头）',
         origin: 'sternum_upper',
         insertion: 'mastoidR',
@@ -45,6 +46,7 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
       },
       {
         id: 'scm-clavicular',
+        window: 'frontNeckR',
         label: '胸锁乳突肌（锁骨头）',
         origin: 'clavicle_medR',
         insertion: 'mastoidR',
@@ -234,8 +236,8 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'chair', position: [0, 0, -0.04], scale: [1, 0.8, 1] }],
     fascicles: [
-      { id: 'scalene-ant', label: '前斜角肌（颈椎横突 → 第1肋）', origin: 'c_transverseR', insertion: 'rib1R', radius: 0.013, tendonRatio: 0.18 },
-      { id: 'scalene-mid', label: '中后斜角肌（颈椎横突 → 第1–2肋）', origin: 'c_transverse_upperR', insertion: 'rib2R', radius: 0.015, tendonRatio: 0.18 },
+      { id: 'scalene-ant', window: 'frontNeckR', label: '前斜角肌（颈椎横突 → 第1肋）', origin: 'c_transverseR', insertion: 'rib1R', radius: 0.013, tendonRatio: 0.18 },
+      { id: 'scalene-mid', window: 'frontNeckR', label: '中后斜角肌（颈椎横突 → 第1–2肋）', origin: 'c_transverse_upperR', insertion: 'rib2R', radius: 0.015, tendonRatio: 0.18 },
     ],
     poses: {
       setup: {
@@ -420,8 +422,8 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
       radius: 0.16,
     },
     cameras: [
+      { id: 'rightSide', label: '右后侧颈部与上位肋骨', position: [-1.329, 2.235, -0.73], target: [-0.03, 0.96, 0.02] },
       { id: 'front', label: '右前方颈侧与椅沿', position: [-1.05, 1.35, 1.25], target: [0, 0.96, 0] },
-      { id: 'rightSide', label: '右侧斜角肌—肋骨特写', position: [-1.18, 1.16, 0.65], target: [-0.03, 0.96, 0.02] },
       { id: 'back', label: '背面颈肩观察视角', position: [-0.2, 1.18, -1.32], target: [0, 0.96, 0] },
     ],
   },
@@ -460,8 +462,8 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'chair', position: [0, 0, -0.04], scale: [1, 0.8, 1] }],
     fascicles: [
-      { id: 'suboccip-r', label: '右侧枕下肌群（C1/C2 → 颅底）', origin: 'c1_arch', insertion: 'occiputR', radius: 0.012, tendonRatio: 0.15 },
-      { id: 'suboccip-l', label: '左侧枕下肌群（C1/C2 → 颅底）', origin: 'c1_arch', insertion: 'occiputL', radius: 0.012, tendonRatio: 0.15 },
+      { id: 'suboccip-r', window: 'occipitalR', label: '右侧枕下肌群（C1/C2 → 颅底）', origin: 'c1_arch', insertion: 'occiputR', radius: 0.012, tendonRatio: 0.15 },
+      { id: 'suboccip-l', window: 'occipitalL', label: '左侧枕下肌群（C1/C2 → 颅底）', origin: 'c1_arch', insertion: 'occiputL', radius: 0.012, tendonRatio: 0.15 },
     ],
     poses: {
       setup: {
@@ -666,8 +668,8 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'chair', position: [0, 0, -0.04], scale: [1, 0.8, 1] }],
     fascicles: [
-      { id: 'lev-scap-sup', label: '肩胛提肌（C1–C2 上束）', origin: 'c_transverse_upperR', insertion: 'scapula_sup_angleR', radius: 0.014, tendonRatio: 0.2 },
-      { id: 'lev-scap-inf', label: '肩胛提肌（C3–C4 下束）', origin: 'c_transverseR', insertion: 'scapula_sup_angleR', radius: 0.015, tendonRatio: 0.2 },
+      { id: 'lev-scap-sup', window: 'napeR', label: '肩胛提肌（C1–C2 上束）', origin: 'c_transverse_upperR', insertion: 'scapula_sup_angleR', radius: 0.014, tendonRatio: 0.2 },
+      { id: 'lev-scap-inf', window: 'napeR', label: '肩胛提肌（C3–C4 下束）', origin: 'c_transverseR', insertion: 'scapula_sup_angleR', radius: 0.015, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {
@@ -899,8 +901,8 @@ export const neckExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'chair', position: [0, 0, -0.04], scale: [1, 0.8, 1] }],
     fascicles: [
-      { id: 'lev2-sup', label: '肩胛提肌（上束）', origin: 'c_transverse_upperR', insertion: 'scapula_sup_angleR', radius: 0.014, tendonRatio: 0.2 },
-      { id: 'lev2-inf', label: '肩胛提肌（下束）', origin: 'c_transverseR', insertion: 'scapula_sup_angleR', radius: 0.015, tendonRatio: 0.2 },
+      { id: 'lev2-sup', window: 'napeR', label: '肩胛提肌（上束）', origin: 'c_transverse_upperR', insertion: 'scapula_sup_angleR', radius: 0.014, tendonRatio: 0.2 },
+      { id: 'lev2-inf', window: 'napeR', label: '肩胛提肌（下束）', origin: 'c_transverseR', insertion: 'scapula_sup_angleR', radius: 0.015, tendonRatio: 0.2 },
     ],
     poses: {
       setup: {

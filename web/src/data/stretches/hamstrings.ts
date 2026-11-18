@@ -38,6 +38,7 @@ export const hamstringsSpec: Stretch3DSpec = {
   fascicles: [
     {
       id: 'ham-biceps-femoris',
+      window: 'thighBackR',
       label: '股二头肌（外侧束）',
       origin: 'ischial_tuberosityR',
       via: ['thigh_mid_postR'],
@@ -47,6 +48,7 @@ export const hamstringsSpec: Stretch3DSpec = {
     },
     {
       id: 'ham-semitendinosus',
+      window: 'thighBackR',
       label: '半腱肌与半膜肌（内侧束）',
       origin: 'ischial_tuberosityR',
       via: ['thigh_mid_postR'],

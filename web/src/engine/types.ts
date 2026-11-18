@@ -1,3 +1,5 @@
+import type { WindowLocation } from './AnatomicalWindow';
+
 export type PnfPhaseId = 'setup' | 'stretch' | 'resist' | 'deepen';
 
 export interface Euler3 {
@@ -57,6 +59,7 @@ export interface PoseAngles {
 }
 
 export interface FascicleSpec {
+  window: WindowLocation;
   id: string;
   label?: string;
   origin: string;
@@ -94,6 +97,7 @@ export interface AngleGaugeSpec {
 }
 
 export interface PropSpec {
+  showUnderside?: boolean; // See the knee contact through a desk top.
   type: 'chair' | 'doorframe' | 'bench' | 'step' | 'table' | 'wall' | 'corner-wall' | 'bar';
   position: [number, number, number];
   rotationY?: number;

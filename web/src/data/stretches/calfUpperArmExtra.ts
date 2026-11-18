@@ -36,7 +36,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'doorframe', position: [0.15, 0, 0.26] }],
     fascicles: [
-      { id: 'soleus-main', label: '比目鱼肌（胫腓骨上段后面 → 跟腱 → 跟骨）', origin: 'tibia_post_upperR', via: ['achilles_midR'], insertion: 'calcaneusR', radius: 0.022, tendonRatio: 0.3 },
+      { id: 'soleus-main', window: 'calfBackR', label: '比目鱼肌（胫腓骨上段后面 → 跟腱 → 跟骨）', origin: 'tibia_post_upperR', via: ['achilles_midR'], insertion: 'calcaneusR', radius: 0.022, tendonRatio: 0.3 },
     ],
     poses: {
       setup: {
@@ -172,8 +172,8 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
       radius: 0.16,
     },
     cameras: [
+      { id: 'backRight', label: '右后屈膝与深层比目鱼肌', position: [-1.359, 0.755, -0.75], target: [-0.06, 0.38, 0] },
       { id: 'sideRight', label: '从门内侧看屈膝与足跟', position: [1.45, 1.15, -0.65], target: [-0.06, 0.45, 0.08] },
-      { id: 'backRight', label: '右后深层比目鱼肌特写', position: [-1.05, 0.65, -1.12], target: [-0.06, 0.38, 0] },
       { id: 'fullBody', label: '全身扶门框姿态视角', position: [-1.45, 1.15, 1.48], target: [0, 0.78, 0.08] },
     ],
   },
@@ -214,7 +214,7 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'bench', position: [-0.14, 0, -0.54], rotationY: 90, scale: [1.06, 1.531, 0.65] }],
     fascicles: [
-      { id: 'tib-ant-main', label: '胫骨前肌（胫骨外侧 → 跨踝前 → 第1跖骨底）', origin: 'tibia_lat_shaftR', via: ['ankle_ant_retinaculumR'], insertion: 'medial_cuneiformR', radius: 0.017, tendonRatio: 0.32 },
+      { id: 'tib-ant-main', window: 'shinR', label: '胫骨前肌（胫骨外侧 → 跨踝前 → 第1跖骨底）', origin: 'tibia_lat_shaftR', via: ['ankle_ant_retinaculumR'], insertion: 'medial_cuneiformR', radius: 0.017, tendonRatio: 0.32 },
     ],
     poses: {
       setup: {
@@ -402,8 +402,8 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'bar', position: [0, 0.16, -0.56] }],
     fascicles: [
-      { id: 'biceps-long', label: '肱二头肌（长头：盂上结节 → 桡骨粗隆）', origin: 'supraglenoid_tubercleR', via: ['shoulder_ant_capsuleR', 'humerus_bicipital_ridgeR'], insertion: 'radial_tuberosityR', radius: 0.017, tendonRatio: 0.26 },
-      { id: 'biceps-short', label: '肱二头肌（短头：喙突 → 桡骨粗隆）', origin: 'coracoidR', via: ['shoulder_ant_capsuleR'], insertion: 'radial_tuberosityR', radius: 0.017, tendonRatio: 0.24 },
+      { id: 'biceps-long', window: 'upperArmFrontR', label: '肱二头肌（长头：盂上结节 → 桡骨粗隆）', origin: 'supraglenoid_tubercleR', via: ['shoulder_ant_capsuleR', 'humerus_bicipital_ridgeR'], insertion: 'radial_tuberosityR', radius: 0.017, tendonRatio: 0.26 },
+      { id: 'biceps-short', window: 'upperArmFrontR', label: '肱二头肌（短头：喙突 → 桡骨粗隆）', origin: 'coracoidR', via: ['shoulder_ant_capsuleR'], insertion: 'radial_tuberosityR', radius: 0.017, tendonRatio: 0.24 },
     ],
     poses: {
       setup: {
@@ -599,8 +599,8 @@ export const calfUpperArmExtraSpecs: Stretch3DSpec[] = [
     },
     props: [{ type: 'wall', position: [-0.67, 0, -0.14], rotationY: 8 }],
     fascicles: [
-      { id: 'triceps-long', label: '肱三头肌（长头：盂下结节 → 尺骨鹰嘴）', origin: 'infraglenoid_tubercleR', via: ['shoulder_inf_capsuleR', 'humerus_post_shaftR', 'elbow_post_wrapR'], insertion: 'olecranonR', radius: 0.019, tendonRatio: 0.24 },
-      { id: 'triceps-lat', label: '肱三头肌（外侧头：肱骨后面 → 尺骨鹰嘴）', origin: 'humerus_post_shaftR', via: ['elbow_post_wrapR'], insertion: 'olecranonR', radius: 0.018, tendonRatio: 0.22 },
+      { id: 'triceps-long', window: 'upperArmBackR', label: '肱三头肌（长头：盂下结节 → 尺骨鹰嘴）', origin: 'infraglenoid_tubercleR', via: ['shoulder_inf_capsuleR', 'humerus_post_shaftR', 'elbow_post_wrapR'], insertion: 'olecranonR', radius: 0.019, tendonRatio: 0.24 },
+      { id: 'triceps-lat', window: 'upperArmBackR', label: '肱三头肌（外侧头：肱骨后面 → 尺骨鹰嘴）', origin: 'humerus_post_shaftR', via: ['elbow_post_wrapR'], insertion: 'olecranonR', radius: 0.018, tendonRatio: 0.22 },
     ],
     poses: {
       setup: {

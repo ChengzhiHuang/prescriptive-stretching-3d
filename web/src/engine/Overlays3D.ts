@@ -34,6 +34,8 @@ export class Overlays3D {
   private readonly angleMidpoint = new THREE.Vector3();
   private readonly blocked: { x: number; y: number; w: number; h: number }[] = [];
   private currentSpec: Stretch3DSpec | null = null;
+  private readonly bundleStart = new THREE.Vector3();
+  private readonly bundleEnd = new THREE.Vector3();
   private readonly projScratch = new THREE.Vector3();
   private readonly labelMetrics = new WeakMap<
     HTMLElement,
@@ -218,6 +220,18 @@ export class Overlays3D {
       for (const name of names) {
         const p = rig.getSocketWorldPos(name, this.projScratch).project(camera);
         this.blocked.push({ x: (p.x + 1) * width / 2, y: (1 - p.y) * height / 2, w: 18, h: 18 });
+      }
+      // Keep stage labels clear of the muscle bellies, including on narrow layouts.
+      for (const bundle of this.currentSpec.fascicles) {
+        if (bundle.role === 'nerve' || bundle.role === 'synergist') continue;
+        const route = [bundle.origin, ...(bundle.via ?? []), bundle.insertion];
+        rig.getSocketWorldPos(route[0], this.bundleStart);
+        for (let i = 1; i < route.length; i++) {
+          rig.getSocketWorldPos(route[i], this.bundleEnd);
+          const p = this.projScratch.lerpVectors(this.bundleStart, this.bundleEnd, 0.5).project(camera);
+          this.blocked.push({ x: (p.x + 1) * width / 2, y: (1 - p.y) * height / 2, w: 13, h: 14 });
+          this.bundleStart.copy(this.bundleEnd);
+        }
       }
     }
     // 1. Update Overload Ring in mistake mode

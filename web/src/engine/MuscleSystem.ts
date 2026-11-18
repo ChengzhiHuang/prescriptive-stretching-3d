@@ -86,6 +86,13 @@ export class MuscleSystem {
     }
   }
 
+  public setAnatomyDetail(detailed: boolean): void {
+    for (const item of this.items) {
+      item.mesh.visible = detailed || (item.spec.role !== 'nerve' && item.spec.role !== 'synergist');
+      item.originPin.visible = item.insertionPin.visible = detailed;
+    }
+  }
+
   public calibrateLengths(
     rig: HumanRig,
     setupLenMap: Record<string, number>,
@@ -158,7 +165,7 @@ export class MuscleSystem {
     isMistake: boolean,
     elapsedSec: number,
     poseChanged = true,
-    drawFibers = true
+    animateContraction = false
   ): { strainRatio: number; elongationPct: number } {
     let strainSum = 0;
     let primaryCount = 0;
@@ -191,19 +198,19 @@ export class MuscleSystem {
         }
       } else if (isMistake) {
         // Slack / ineffective stretch color
-        bellyCol.setHex(0x8d7b7c);
+        bellyCol.setHex(0x9b6464);
       } else if (phase === 'resist') {
         // Isometric PNF contraction: amber-crimson pulse + slight isometric belly thickening!
-        const pulse = 0.5 + 0.5 * Math.sin(elapsedSec * 7.5);
+        const pulse = animateContraction ? 0.5 + 0.5 * Math.sin(elapsedSec * 7.5) : 0.4;
         bellyCol.setRGB(0.96, 0.24 + 0.34 * pulse, 0.14 + 0.04 * pulse);
         bellyBulge = 1.06 + 0.08 * pulse;
       } else {
         // Setup (coral) -> Stretch/Deepen (vivid crimson-scarlet proportional to strain)
         const s = THREE.MathUtils.clamp(rawStrain, 0, 1);
         bellyCol.setRGB(
-          0.76 + 0.22 * s,
-          0.32 - 0.18 * s,
-          0.28 - 0.08 * s
+          0.55 + 0.14 * s,
+          0.095 - 0.052 * s,
+          0.063 - 0.032 * s
         );
         // Poisson thinning as muscle elongates
         bellyBulge = 1.0 - 0.14 * s;
@@ -215,7 +222,7 @@ export class MuscleSystem {
         primaryCount += 1;
       }
 
-      if (!drawFibers) continue;
+      if (!mesh.visible) continue;
       originPin.position.copy(curve.points[0]);
       insertionPin.position.copy(curve.points[curve.points.length - 1]);
       if (!item.frames) {
@@ -285,6 +292,12 @@ export class MuscleSystem {
       strainRatio: THREE.MathUtils.clamp(avgStrain, 0, 1.15),
       elongationPct: isMistake ? Math.min(3.5, elongationPct * 0.3) : elongationPct,
     };
+  }
+
+  public dispose(): void {
+    this.clear();
+    this.pinOriginMat.dispose();
+    this.pinInsertMat.dispose();
   }
 
   public clear(): void {

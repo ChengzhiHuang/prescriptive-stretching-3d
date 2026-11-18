@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ContactShadows } from './ContactShadows';
 import { HumanRig, sampleTransition } from './HumanRig';
+import { MuscleWindowPass } from './MuscleWindowPass';
 import { MuscleSystem } from './MuscleSystem';
 import { Overlays3D } from './Overlays3D';
 import { PropSystem } from './PropSystem';
@@ -65,6 +66,8 @@ export class Stage3D {
   private controls: OrbitControls;
   private rig: HumanRig;
   private muscles: MuscleSystem;
+  private readonly windowPass: MuscleWindowPass;
+  private hasSurface = false;
   private props: PropSystem;
   private overlays: Overlays3D;
   private readonly contactShadows: ContactShadows;
@@ -134,6 +137,7 @@ export class Stage3D {
       antialias: true,
       powerPreference: this.mobile ? 'default' : 'high-performance',
     });
+    this.renderer.setClearAlpha(0);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.02;
     const canvas = this.renderer.domElement;
@@ -187,9 +191,9 @@ export class Stage3D {
 
     this.contactShadows = new ContactShadows();
     this.props = new PropSystem();
-    this.rig = new HumanRig();
+    this.windowPass = new MuscleWindowPass(this.camera, [hemi, keyLight, rimLight]);
+    this.rig = new HumanRig(this.windowPass);
     this.muscles = new MuscleSystem();
-    this.muscles.group.visible = this.xray;
     this.overlays = new Overlays3D(overlayContainer);
 
     this.scene.add(this.props.group);
@@ -222,6 +226,7 @@ export class Stage3D {
     this.rig.setTargetMuscles(spec.fascicles);
     this.props.setProps(spec.props);
     this.muscles.loadFascicles(spec.fascicles, this.rig);
+    this.updateMuscleView();
 
     // Calibrate setup rest length vs deepen max stretch length for accurate strain %
     this.rig.applyPose(spec.poses.setup);
@@ -495,10 +500,16 @@ export class Stage3D {
   public setXrayMode(xray: boolean): void {
     if (this.xray === xray) return;
     this.xray = xray;
-    this.muscles.group.visible = xray;
+    this.updateMuscleView();
     this.rig.setXrayMode(xray);
     this.lastPose = undefined;
     this.invalidate();
+  }
+
+  private updateMuscleView(): void {
+    const local = this.hasSurface && !this.xray;
+    (local ? this.windowPass.scene : this.scene).add(this.muscles.group);
+    this.muscles.setAnatomyDetail(this.xray);
   }
 
   private async loadHumanSurface(): Promise<void> {
@@ -509,6 +520,8 @@ export class Stage3D {
       if (this.disposed || !this.rig.attachSurface(surface)) {
         surface.geometry.dispose();
       } else {
+        this.hasSurface = true;
+        this.updateMuscleView();
         this.lastPose = undefined;
         this.invalidate();
       }
@@ -758,7 +771,10 @@ export class Stage3D {
       }
     }
 
-    if (redraw) this.renderer.render(this.scene, this.camera);
+    if (redraw) {
+      if (this.hasSurface && !this.xray) this.windowPass.render(this.renderer, this.camera);
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   public dispose(): void {
@@ -775,6 +791,8 @@ export class Stage3D {
     this.controls.dispose();
     this.props.dispose();
     this.rig.disposeSurface();
+    this.muscles.dispose();
+    this.windowPass.dispose();
 
     const geometries = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();

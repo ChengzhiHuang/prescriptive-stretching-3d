@@ -39,6 +39,7 @@ export const pectoralisMajor1Spec: Stretch3DSpec = {
   fascicles: [
     {
       id: 'pec-clavicular',
+      window: 'chestR',
       label: '胸大肌（锁骨部束）',
       origin: 'clavicle_medR',
       via: ['shoulder_ant_capsuleR'],
@@ -48,6 +49,7 @@ export const pectoralisMajor1Spec: Stretch3DSpec = {
     },
     {
       id: 'pec-sternocostal-mid',
+      window: 'chestR',
       label: '胸大肌（胸肋中部束）',
       origin: 'sternum_mid',
       via: ['shoulder_ant_capsuleR'],
@@ -57,6 +59,7 @@ export const pectoralisMajor1Spec: Stretch3DSpec = {
     },
     {
       id: 'pec-sternocostal-low',
+      window: 'chestR',
       label: '胸大肌（胸肋下部束）',
       origin: 'sternum_lower',
       via: ['shoulder_ant_capsuleR'],

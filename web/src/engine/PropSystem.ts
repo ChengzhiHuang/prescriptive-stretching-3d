@@ -15,6 +15,7 @@ export class PropSystem {
   private readonly end = new THREE.Vector3();
   private readonly direction = new THREE.Vector3();
   private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly desktopEdge = new THREE.LineBasicMaterial({ color: 0x8396a5 });
   private readonly edgeMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.5 });
   private translucentPanels: THREE.Mesh[] = [];
   private readonly panelPos = new THREE.Vector3();
@@ -67,7 +68,7 @@ export class PropSystem {
         this.dynamicLinks.push({ sockets: spec.attachSockets, mesh, curve });
         continue;
       }
-      const obj = this.buildProp(spec.type);
+      const obj = this.buildProp(spec);
       obj.position.set(...spec.position);
       obj.rotation.y = ((spec.rotationY ?? 0) * Math.PI) / 180;
       if (spec.scale) {
@@ -114,7 +115,7 @@ export class PropSystem {
   public clear(): void {
     const geometries = new Set<THREE.BufferGeometry>();
     this.group.traverse(object => {
-      if (object instanceof THREE.Mesh) geometries.add(object.geometry);
+      if (object instanceof THREE.Mesh || object instanceof THREE.LineSegments) geometries.add(object.geometry);
       if (object instanceof THREE.InstancedMesh) object.dispose();
     });
     geometries.forEach(geometry => geometry.dispose());
@@ -125,12 +126,12 @@ export class PropSystem {
 
   public dispose(): void {
     this.clear();
-    for (const mat of [this.woodMat, this.metalMat, this.wallMat, this.nearWallMat, this.edgeMat, this.strapMat]) mat.dispose();
+    for (const mat of [this.woodMat, this.metalMat, this.wallMat, this.nearWallMat, this.desktopEdge, this.edgeMat, this.strapMat]) mat.dispose();
   }
 
-  private buildProp(type: PropSpec['type']): THREE.Group {
+  private buildProp(spec: PropSpec): THREE.Group {
     const g = new THREE.Group();
-    switch (type) {
+    switch (spec.type) {
       case 'chair': {
         const seat = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.032, 0.42), this.woodMat);
         seat.position.set(0, 0.45, 0);
@@ -197,6 +198,10 @@ export class PropSystem {
       case 'table': {
         // Groin/desk-height table (height = 0.76m, top 0.76 x 0.92m)
         const top = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.04, 0.92), this.woodMat);
+        if (spec.showUnderside) {
+          top.material = this.nearWallMat;
+          top.add(new THREE.LineSegments(new THREE.EdgesGeometry(top.geometry), this.desktopEdge));
+        }
         top.position.set(0, 0.74, 0);
         g.add(top);
         const legGeo = new THREE.CylinderGeometry(0.02, 0.018, 0.72, 10);
